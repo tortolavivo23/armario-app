@@ -1,58 +1,67 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EmptyState } from '@/components/empty-state';
+import { FilterSummary } from '@/components/filter-summary';
 import { GarmentCard } from '@/components/garment-card';
 import { GarmentDetailModal } from '@/components/garment-detail-modal';
 import { GarmentEditModal } from '@/components/garment-edit-modal';
 import { OverflowMenu } from '@/components/overflow-menu';
+import { SearchBar } from '@/components/search-bar';
 import { TagFilter } from '@/components/tag-filter';
 import { TagsManagerModal } from '@/components/tags-manager-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import {
-  BottomTabInset,
-  MaxContentWidth,
-  MinCardWidth,
-  Radius,
-  Spacing,
-} from '@/constants/theme';
+import { WardrobeSwitcher } from '@/components/wardrobe-switcher';
+import { WardrobesManagerModal } from '@/components/wardrobes-manager-modal';
+import { BottomTabInset, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useThemePreference } from '@/context/theme-context';
 import { useWardrobe } from '@/context/wardrobe-context';
+import { GridGap, GridPadding, useGridLayout } from '@/hooks/use-grid-layout';
 import { useTheme } from '@/hooks/use-theme';
-
-const GRID_PADDING = Spacing.four;
-const GRID_GAP = Spacing.three;
+import { matchesWardrobe } from '@/types/wardrobe';
 
 export default function WardrobeScreen() {
-  const { garments, isLoading, removeGarment } = useWardrobe();
+  const { garments, isLoading, removeGarment, activeWardrobe } = useWardrobe();
   const { isDark, toggleDark } = useThemePreference();
   const theme = useTheme();
-  const { width, height } = useWindowDimensions();
-  const isLandscape = width > height;
+  const { isLandscape, numColumns, cardWidth, imageAspectRatio } = useGridLayout();
 
   const [query, setQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isManagingTags, setIsManagingTags] = useState(false);
+  const [isManagingWardrobes, setIsManagingWardrobes] = useState(false);
 
   const selectedGarment = garments.find((g) => g.id === selectedId) ?? null;
   const editingGarment = garments.find((g) => g.id === editingId) ?? null;
 
+  // Everything on this screen is scoped to the wardrobe being viewed, so the
+  // tag filter only offers tags you can actually see results for.
+  const wardrobeGarments = useMemo(
+    () => garments.filter((garment) => matchesWardrobe(garment.wardrobeId, activeWardrobe)),
+    [garments, activeWardrobe],
+  );
+
   const allTags = useMemo(
-    () => Array.from(new Set(garments.flatMap((g) => g.tags))).sort((a, b) => a.localeCompare(b)),
-    [garments],
+    () =>
+      Array.from(new Set(wardrobeGarments.flatMap((g) => g.tags))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [wardrobeGarments],
   );
 
   const filteredGarments = useMemo(() => {
     const trimmedQuery = query.trim().toLowerCase();
-    return garments.filter((garment) => {
-      const matchesQuery = trimmedQuery.length === 0 || garment.name.toLowerCase().includes(trimmedQuery);
+    return wardrobeGarments.filter((garment) => {
+      const matchesQuery =
+        trimmedQuery.length === 0 || garment.name.toLowerCase().includes(trimmedQuery);
       const matchesTags = selectedTags.every((tag) => garment.tags.includes(tag));
       return matchesQuery && matchesTags;
     });
-  }, [garments, query, selectedTags]);
+  }, [wardrobeGarments, query, selectedTags]);
 
   function toggleTag(tag: string) {
     setSelectedTags((current) =>
@@ -65,24 +74,17 @@ export default function WardrobeScreen() {
     setSelectedTags([]);
   }
 
-  // Exact card widths keep a lone card in the last row from stretching across it.
-  const availableWidth = Math.min(width, MaxContentWidth) - GRID_PADDING * 2;
-  const numColumns = Math.max(2, Math.floor(availableWidth / MinCardWidth));
-  const cardWidth = (availableWidth - GRID_GAP * (numColumns - 1)) / numColumns;
-
   const hasFilters = query.trim().length > 0 || selectedTags.length > 0;
-  const isEmpty = !isLoading && garments.length === 0;
-  const noResults = !isLoading && garments.length > 0 && filteredGarments.length === 0;
+  const isEmpty = !isLoading && wardrobeGarments.length === 0;
+  const noResults = !isLoading && wardrobeGarments.length > 0 && filteredGarments.length === 0;
 
   const titleBlock = (
     <View style={styles.titleRow}>
-      <ThemedText type="title" style={[styles.title, isLandscape && styles.titleLandscape]}>
-        Mi armario
-      </ThemedText>
-      {garments.length > 0 && (
+      <WardrobeSwitcher compact={isLandscape} />
+      {wardrobeGarments.length > 0 && (
         <View style={[styles.countBadge, { backgroundColor: theme.backgroundSelected }]}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            {garments.length}
+            {wardrobeGarments.length}
           </ThemedText>
         </View>
       )}
@@ -91,6 +93,12 @@ export default function WardrobeScreen() {
 
       <OverflowMenu
         items={[
+          {
+            label: 'Gestionar armarios',
+            icon: '🚪',
+            testID: 'menu-manage-wardrobes',
+            onPress: () => setIsManagingWardrobes(true),
+          },
           {
             label: 'Gestionar etiquetas',
             icon: '🏷️',
@@ -110,29 +118,7 @@ export default function WardrobeScreen() {
   );
 
   const searchBar = (
-    <View
-      style={[
-        styles.searchBar,
-        isLandscape && styles.searchBarLandscape,
-        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-      ]}>
-      <ThemedText themeColor="textSecondary" style={styles.searchIcon}>
-        🔍
-      </ThemedText>
-      <TextInput
-        testID="wardrobe-search"
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Buscar por nombre…"
-        placeholderTextColor={theme.textSecondary}
-        style={[styles.searchInput, { color: theme.text }]}
-      />
-      {query.length > 0 && (
-        <Pressable testID="wardrobe-search-clear" onPress={() => setQuery('')} hitSlop={10}>
-          <ThemedText themeColor="textSecondary">✕</ThemedText>
-        </Pressable>
-      )}
-    </View>
+    <SearchBar testID="wardrobe-search" value={query} onChangeText={setQuery} compact={isLandscape} />
   );
 
   const listHeader = (
@@ -150,7 +136,7 @@ export default function WardrobeScreen() {
         </>
       )}
 
-      {garments.length > 0 && (
+      {wardrobeGarments.length > 0 && (
         <>
           {allTags.length > 0 && (
             <TagFilter
@@ -162,47 +148,35 @@ export default function WardrobeScreen() {
           )}
 
           {hasFilters && (
-            <View style={styles.resultRow}>
-              <ThemedText type="small" themeColor="textSecondary">
-                {filteredGarments.length}{' '}
-                {filteredGarments.length === 1 ? 'prenda encontrada' : 'prendas encontradas'}
-              </ThemedText>
-              <Pressable testID="wardrobe-clear-filters" onPress={clearFilters} hitSlop={10}>
-                <ThemedText type="smallBold" style={styles.clearLink}>
-                  Limpiar filtros
-                </ThemedText>
-              </Pressable>
-            </View>
+            <FilterSummary
+              testID="wardrobe-clear-filters"
+              count={filteredGarments.length}
+              singular="prenda encontrada"
+              plural="prendas encontradas"
+              onClear={clearFilters}
+            />
           )}
         </>
       )}
 
       {isEmpty && (
-        <ThemedView
-          type="backgroundElement"
-          style={[styles.emptyState, { borderColor: theme.border }]}>
-          <ThemedText style={styles.emptyIcon}>🧥</ThemedText>
-          <ThemedText type="smallBold" style={styles.emptyTitle}>
-            Todavía no hay prendas
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.emptyHint}>
-            Ve a la pestaña Añadir para subir tu primera prenda.
-          </ThemedText>
-        </ThemedView>
+        <EmptyState
+          icon="🧥"
+          title={garments.length === 0 ? 'Todavía no hay prendas' : 'Este armario está vacío'}
+          hint={
+            garments.length === 0
+              ? 'Ve a la pestaña Añadir para subir tu primera prenda.'
+              : 'Añade prendas aquí o muévelas desde otro armario al editarlas.'
+          }
+        />
       )}
 
       {noResults && (
-        <ThemedView
-          type="backgroundElement"
-          style={[styles.emptyState, { borderColor: theme.border }]}>
-          <ThemedText style={styles.emptyIcon}>🔍</ThemedText>
-          <ThemedText type="smallBold" style={styles.emptyTitle}>
-            Sin resultados
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.emptyHint}>
-            Prueba a cambiar la búsqueda o quitar algún filtro.
-          </ThemedText>
-        </ThemedView>
+        <EmptyState
+          icon="🔍"
+          title="Sin resultados"
+          hint="Prueba a cambiar la búsqueda o quitar algún filtro."
+        />
       )}
     </View>
   );
@@ -224,7 +198,7 @@ export default function WardrobeScreen() {
             <GarmentCard
               garment={item}
               width={cardWidth}
-              imageAspectRatio={isLandscape ? 3 / 2 : 1}
+              imageAspectRatio={imageAspectRatio}
               onPress={() => setSelectedId(item.id)}
             />
           )}
@@ -246,6 +220,11 @@ export default function WardrobeScreen() {
         <GarmentEditModal garment={editingGarment} onClose={() => setEditingId(null)} />
 
         <TagsManagerModal visible={isManagingTags} onClose={() => setIsManagingTags(false)} />
+
+        <WardrobesManagerModal
+          visible={isManagingWardrobes}
+          onClose={() => setIsManagingWardrobes(false)}
+        />
       </SafeAreaView>
     </ThemedView>
   );
@@ -262,12 +241,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   list: {
-    paddingHorizontal: GRID_PADDING,
+    paddingHorizontal: GridPadding,
     paddingBottom: BottomTabInset + Spacing.four,
-    gap: GRID_GAP,
+    gap: GridGap,
   },
   row: {
-    gap: GRID_GAP,
+    gap: GridGap,
   },
   header: {
     gap: Spacing.three,
@@ -294,81 +273,11 @@ const styles = StyleSheet.create({
   titleSpacer: {
     flex: 1,
   },
-  title: {
-    fontSize: 30,
-    lineHeight: 38,
-  },
-  titleLandscape: {
-    fontSize: 24,
-    lineHeight: 30,
-  },
   countBadge: {
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,
     borderRadius: Radius.pill,
     minWidth: 28,
     alignItems: 'center',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
-    minHeight: 48,
-  },
-  searchBarLandscape: {
-    minHeight: 44,
-  },
-  searchIcon: {
-    fontSize: 15,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: Spacing.two,
-  },
-  tagFilterGroups: {
-    gap: Spacing.three,
-  },
-  tagFilterGroup: {
-    gap: Spacing.one,
-  },
-  groupLabel: {
-    letterSpacing: 0.6,
-    fontSize: 11,
-  },
-  tagFilter: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
-  resultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
-  clearLink: {
-    color: '#208AEF',
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: Spacing.five,
-    borderRadius: Radius.large,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.one,
-    marginTop: Spacing.two,
-  },
-  emptyIcon: {
-    fontSize: 44,
-    marginBottom: Spacing.two,
-  },
-  emptyTitle: {
-    fontSize: 17,
-  },
-  emptyHint: {
-    textAlign: 'center',
   },
 });

@@ -15,6 +15,7 @@ const GARMENT: Garment = {
   imageUris: ['file:///documents/garments/1.jpg', 'file:///documents/garments/2.jpg'],
   description: 'Talla M, comprada en Lisboa.',
   tags: [],
+  wardrobeId: null,
   createdAt: 1,
 };
 
@@ -54,6 +55,7 @@ describe('migrating stored garments', () => {
       name: 'Camisa',
       imageUri: 'file:///a.jpg',
       tags: [],
+      wardrobeId: null,
       createdAt: 1,
     } as never);
 
@@ -67,6 +69,7 @@ describe('migrating stored garments', () => {
       name: 'Camisa',
       imageUri: null,
       tags: [],
+      wardrobeId: null,
       createdAt: 1,
     } as never);
 
@@ -100,6 +103,7 @@ describe('several photos per garment', () => {
         imageUris: ['file:///picked/1.jpg', 'file:///picked/2.jpg'],
         description: '',
         tags: [],
+        wardrobeId: null,
       });
     });
 
@@ -117,6 +121,7 @@ describe('several photos per garment', () => {
         imageUris: [...GARMENT.imageUris, 'file:///picked/new.jpg'],
         description: GARMENT.description,
         tags: [],
+        wardrobeId: null,
       });
     });
 
@@ -134,6 +139,7 @@ describe('several photos per garment', () => {
         imageUris: [GARMENT.imageUris[0]],
         description: GARMENT.description,
         tags: [],
+        wardrobeId: null,
       });
     });
 
@@ -161,6 +167,7 @@ describe('several photos per garment', () => {
         imageUris: ['file:///picked/a.jpg', 'file:///picked/b.jpg'],
         description: '',
         tags: [],
+        wardrobeId: null,
       });
     });
 
@@ -192,6 +199,7 @@ describe('several photos per garment', () => {
       imageUris: ['file:///a.jpg', 'file:///b.jpg'],
       description: '',
       tags: [],
+      wardrobeId: null,
     });
 
     await fireEvent.press(screen.getByTestId('garment-form-remove-image-0'));
@@ -238,6 +246,7 @@ describe('garment description', () => {
         imageUris: [],
         description: 'Talla M',
         tags: [],
+        wardrobeId: null,
       });
     });
 
@@ -261,6 +270,7 @@ describe('garment description', () => {
       imageUris: [],
       description: GARMENT.description,
       tags: [],
+      wardrobeId: null,
     });
 
     expect(screen.getByTestId('garment-form-description').props.value).toBe(GARMENT.description);

@@ -25,6 +25,11 @@ server, no account, no internet connection required.
   have to be retyped.
 - **Filter by tags**, combinable: selecting several tags shows only the garments that carry **all**
   of them.
+- **Wardrobes**: file your clothes into named collections — «invierno», «casa del pueblo» — and
+  switch between them by tapping the screen title. A garment belongs to at most one wardrobe and
+  moves between them from its edit form; garments you have not filed live under «Sin armario».
+  Renaming and deleting live behind the ⋯ menu. **Deleting a wardrobe never deletes clothes**:
+  they simply become unfiled.
 - **Outfits**, on their own tab: group garments you already own into a named set, with its own
   description and tags. A garment can belong to any number of outfits but appears at most once in
   each. Outfits have the same search and grouped tag filter as the wardrobe, and tapping a garment
@@ -115,6 +120,7 @@ npm test
 | `responsive-grid.test.tsx` | Column count and card width in portrait, landscape and on wide screens |
 | `tags.test.tsx` | Tag catalogue, colours, groups, auto-registration, the ⋯ menu, the tag manager and the grouped filter |
 | `images-description.test.tsx` | Several photos per garment, the gallery, the description field, tag autocomplete and the storage migration |
+| `wardrobes.test.tsx` | Creating, renaming and deleting wardrobes, moving garments between them, the title dropdown, and the manager |
 | `theme.test.tsx` | The light/dark preference, its persistence, and the dark mode switch in the ⋯ menu |
 | `outfits.test.tsx` | Outfit storage, no repeated garment within an outfit, one garment across many outfits, the outfits screen with its search and filter, and the create/edit/delete flows |
 
@@ -154,7 +160,7 @@ commits since the previous release.
 still build and upload the artifact, but reuse the existing release rather than
 overwriting it.
 
-Versions carrying a semver pre-release identifier — the current `0.1.0-alpha.4`,
+Versions carrying a semver pre-release identifier — the current `0.1.0-alpha.5`,
 for instance — are published as GitHub pre-releases, so they are not offered as
 the latest stable download. Dropping the suffix (`0.1.0`) publishes a normal
 release.
@@ -228,20 +234,34 @@ armario-app/
 │   │   ├── outfit-editor-modal.tsx
 │   │   ├── tags-manager-modal.tsx  # Tag list behind the ⋯ menu
 │   │   ├── tag-editor-modal.tsx  # Colour and group picker for one tag
+│   │   ├── garment-images-field.tsx  # Photo picker, thumbnails and cover
+│   │   ├── wardrobe-switcher.tsx     # The title dropdown that changes wardrobe
+│   │   ├── wardrobes-manager-modal.tsx  # Renaming and deleting wardrobes
+│   │   ├── wardrobe-picker.tsx # Which wardrobe a garment is filed into
+│   │   ├── name-prompt-modal.tsx  # One-field dialog, used to create and rename
 │   │   ├── tag-picker.tsx      # Tag input with autocomplete, shared by both forms
 │   │   ├── tag-filter.tsx      # Grouped filter chips, shared by both lists
+│   │   ├── search-bar.tsx      # Search field, shared by both lists
+│   │   ├── empty-state.tsx     # "Nothing here yet" card
+│   │   ├── filter-summary.tsx  # Result count and "clear filters"
 │   │   ├── overflow-menu.tsx   # "⋯" dropdown in the wardrobe header
 │   │   ├── tag-chip.tsx
 │   │   └── button.tsx
 │   ├── context/
 │   │   ├── providers.tsx       # The provider stack, shared by the app and the tests
 │   │   ├── theme-context.tsx   # Light/dark preference
-│   │   └── wardrobe-context.tsx  # Global state and persistence
+│   │   ├── wardrobe-context.tsx  # Wires the four stores below together
+│   │   ├── use-garments.ts     # Garment records and their photos
+│   │   ├── use-outfits.ts      # Outfits and their garment references
+│   │   ├── use-tags.ts         # The tag catalogue
+│   │   └── use-wardrobes.ts    # Wardrobes and which one is being viewed
 │   ├── lib/
-│   │   └── persist-image.ts    # Copies photos into the app's storage
+│   │   ├── persist-image.ts    # Copies photos into the app's storage
+│   │   ├── use-persistent-state.ts  # State backed by AsyncStorage
+│   │   └── id.ts
 │   ├── constants/theme.ts      # Colors, spacing, radii, tag palette
-│   ├── hooks/
-│   ├── types/                  # Garment, Outfit and Tag shapes, plus the storage migration
+│   ├── hooks/                  # Theme and grid-layout hooks
+│   ├── types/                  # Garment, Outfit, Tag and Wardrobe shapes, plus the migration
 │   └── __tests__/              # Regression tests
 ├── plugins/
 │   └── with-full-sensor-orientation.js   # Enables all four orientations on Android
@@ -251,8 +271,17 @@ armario-app/
 
 ### Design decisions
 
-- **Global state with React Context** rather than Redux or Zustand: the app has a single list of
-  garments and very few operations, so an extra dependency was not worth it.
+- **Global state with React Context** rather than Redux or Zustand: the app is small enough that an
+  extra dependency was not worth it. The state is split into one hook per store — garments, outfits,
+  tags, wardrobes — each owning its storage key and rules. `WardrobeProvider` only wires them
+  together, which keeps the three ways they affect each other in one readable place: a deleted
+  garment leaves the outfits wearing it, a deleted wardrobe unfiles its garments, and tags typed
+  anywhere get registered in the catalogue.
+- **`usePersistentState` backs every store.** It refuses to write until the first read has finished,
+  so a slow load can never overwrite stored data with an empty initial value.
+- **A garment belongs to at most one wardrobe**, stored as a plain `wardrobeId` on the garment
+  rather than as a list of ids on the wardrobe. Filing, moving and unfiling are then a single field
+  change, and a wardrobe can be deleted without rewriting anything else.
 - **Images are copied into the app's private storage.** The URI returned by the image picker points
   at a temporary cache that Android may clear; copying the file means the photo survives even if the
   user deletes the original.

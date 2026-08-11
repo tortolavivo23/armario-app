@@ -15,6 +15,7 @@ const STORED: Garment[] = [
     imageUris: ['file:///documents/garments/a.jpg'],
     description: '',
     tags: ['casual'],
+    wardrobeId: null,
     createdAt: 1_700_000_000_000,
   },
   {
@@ -23,6 +24,7 @@ const STORED: Garment[] = [
     imageUris: [],
     description: '',
     tags: [],
+    wardrobeId: null,
     createdAt: 1_700_000_001_000,
   },
 ];
@@ -61,7 +63,7 @@ describe('addGarment', () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.addGarment({ name: 'Gorro', imageUris: [], description: '', tags: ['invierno'] });
+      await result.current.addGarment({ name: 'Gorro', imageUris: [], description: '', tags: ['invierno'], wardrobeId: null });
     });
 
     expect(result.current.garments[0].name).toBe('Gorro');
@@ -73,7 +75,7 @@ describe('addGarment', () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.addGarment({ name: 'Gorro', imageUris: [], description: '', tags: [] });
+      await result.current.addGarment({ name: 'Gorro', imageUris: [], description: '', tags: [], wardrobeId: null });
     });
 
     expect(result.current.garments[0].imageUris).toEqual([]);
@@ -84,7 +86,7 @@ describe('addGarment', () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.addGarment({ name: 'Gorro', imageUris: ['file:///picked.jpg'], description: '', tags: [] });
+      await result.current.addGarment({ name: 'Gorro', imageUris: ['file:///picked.jpg'], description: '', tags: [], wardrobeId: null });
     });
 
     expect(persistImage).toHaveBeenCalledTimes(1);
@@ -95,7 +97,7 @@ describe('addGarment', () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.addGarment({ name: 'Gorro', imageUris: [], description: '', tags: [] });
+      await result.current.addGarment({ name: 'Gorro', imageUris: [], description: '', tags: [], wardrobeId: null });
     });
 
     await waitFor(async () => {
@@ -108,8 +110,8 @@ describe('addGarment', () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.addGarment({ name: 'Uno', imageUris: [], description: '', tags: [] });
-      await result.current.addGarment({ name: 'Dos', imageUris: [], description: '', tags: [] });
+      await result.current.addGarment({ name: 'Uno', imageUris: [], description: '', tags: [], wardrobeId: null });
+      await result.current.addGarment({ name: 'Dos', imageUris: [], description: '', tags: [], wardrobeId: null });
     });
 
     const ids = result.current.garments.map((g) => g.id);
@@ -128,6 +130,7 @@ describe('updateGarment', () => {
         imageUris: ['file:///documents/garments/a.jpg'],
         description: '',
         tags: ['formal', 'azul'],
+        wardrobeId: null,
       });
     });
 
@@ -136,6 +139,7 @@ describe('updateGarment', () => {
       id: 'a',
       name: 'Camisa azul',
       tags: ['formal', 'azul'],
+      wardrobeId: null,
       createdAt: 1_700_000_000_000,
     });
   });
@@ -150,6 +154,7 @@ describe('updateGarment', () => {
         imageUris: ['file:///documents/garments/a.jpg'],
         description: '',
         tags: [],
+        wardrobeId: null,
       });
     });
 
@@ -167,6 +172,7 @@ describe('updateGarment', () => {
         imageUris: ['file:///picked/new.jpg'],
         description: '',
         tags: [],
+        wardrobeId: null,
       });
     });
 
@@ -179,7 +185,7 @@ describe('updateGarment', () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.updateGarment('a', { name: 'Camisa', imageUris: [], description: '', tags: [] });
+      await result.current.updateGarment('a', { name: 'Camisa', imageUris: [], description: '', tags: [], wardrobeId: null });
     });
 
     expect(deletePersistedImage).toHaveBeenCalledWith('file:///documents/garments/a.jpg');
@@ -196,6 +202,7 @@ describe('updateGarment', () => {
         imageUris: ['file:///picked/new.jpg'],
         description: '',
         tags: [],
+        wardrobeId: null,
       });
     });
 
@@ -213,6 +220,7 @@ describe('updateGarment', () => {
         imageUris: [],
         description: '',
         tags: [],
+        wardrobeId: null,
       });
     });
 
