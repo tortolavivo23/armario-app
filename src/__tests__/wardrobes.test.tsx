@@ -43,7 +43,14 @@ const GARMENTS: Garment[] = [
   },
 ];
 
-async function seed({ garments = GARMENTS, wardrobes = WARDROBES, active = null } = {}) {
+type SeedOptions = {
+  garments?: Garment[];
+  wardrobes?: Wardrobe[];
+  /** The wardrobe the previous session was looking at. */
+  active?: string;
+};
+
+async function seed({ garments = GARMENTS, wardrobes = WARDROBES, active }: SeedOptions = {}) {
   await AsyncStorage.setItem('wardrobe-garments', JSON.stringify(garments));
   await AsyncStorage.setItem('wardrobe-list', JSON.stringify(wardrobes));
   if (active) await AsyncStorage.setItem('wardrobe-active', active);
