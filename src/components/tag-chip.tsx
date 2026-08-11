@@ -2,39 +2,43 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
 
-import { Accent, Radius, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { DefaultTagColor, Radius, Spacing, tagTint } from '@/constants/theme';
 
 type TagChipProps = {
   label: string;
-  /** Renders the chip in its highlighted state (used by the tag filter row). */
+  /** Tag colour from the catalogue. Falls back to the neutral grey. */
+  color?: string;
+  /** Renders the chip filled, used by the filter row for an active tag. */
   selected?: boolean;
   onPress?: () => void;
   onRemove?: () => void;
+  testID?: string;
 };
 
-export function TagChip({ label, selected = false, onPress, onRemove }: TagChipProps) {
-  const theme = useTheme();
-
+export function TagChip({
+  label,
+  color = DefaultTagColor,
+  selected = false,
+  onPress,
+  onRemove,
+  testID,
+}: TagChipProps) {
   const content = (
     <View
       style={[
         styles.chip,
         {
-          backgroundColor: selected ? Accent : theme.backgroundElement,
-          borderColor: selected ? Accent : theme.border,
+          backgroundColor: selected ? color : tagTint(color),
+          borderColor: selected ? color : tagTint(color, 0.35),
         },
       ]}>
-      <ThemedText type="smallBold" style={selected ? styles.selectedLabel : undefined}>
+      <ThemedText type="smallBold" style={{ color: selected ? '#ffffff' : color }}>
         {label}
       </ThemedText>
 
       {onRemove && (
-        <Pressable onPress={onRemove} hitSlop={10}>
-          <ThemedText
-            type="smallBold"
-            themeColor="textSecondary"
-            style={selected ? styles.selectedLabel : undefined}>
+        <Pressable onPress={onRemove} hitSlop={10} testID={testID ? `${testID}-remove` : undefined}>
+          <ThemedText type="smallBold" style={{ color: selected ? '#ffffff' : color }}>
             ✕
           </ThemedText>
         </Pressable>
@@ -42,10 +46,13 @@ export function TagChip({ label, selected = false, onPress, onRemove }: TagChipP
     </View>
   );
 
-  if (!onPress) return content;
+  if (!onPress) return <View testID={testID}>{content}</View>;
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      style={({ pressed }) => pressed && styles.pressed}>
       {content}
     </Pressable>
   );
@@ -60,9 +67,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  selectedLabel: {
-    color: '#ffffff',
   },
   pressed: {
     opacity: 0.7,

@@ -40,6 +40,35 @@ export const Radius = {
   pill: 999,
 } as const;
 
+/**
+ * Palette offered when colouring a tag. Picking from a fixed set instead of a
+ * free colour picker keeps the wardrobe visually coherent, and every entry is
+ * legible against both the light and the dark background.
+ */
+export const TagColors = [
+  '#208AEF', // azul
+  '#12A594', // verde azulado
+  '#30A46C', // verde
+  '#FFB224', // ámbar
+  '#F76B15', // naranja
+  '#E5484D', // rojo
+  '#E93D82', // rosa
+  '#8E4EC6', // morado
+  '#5B5BD6', // índigo
+  '#7C7C86', // gris
+] as const;
+
+export const DefaultTagColor = TagColors[9];
+
+/** Translucent version of a tag colour, used as a chip background. */
+export function tagTint(color: string, opacity = 0.14) {
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

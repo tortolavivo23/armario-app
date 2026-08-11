@@ -10,14 +10,16 @@ const GARMENTS: Garment[] = [
   {
     id: 'a',
     name: 'Camisa vaquera',
-    imageUri: 'file:///documents/garments/a.jpg',
+    imageUris: ['file:///documents/garments/a.jpg'],
+    description: '',
     tags: ['casual'],
     createdAt: 1_700_000_000_000,
   },
   {
     id: 'b',
     name: 'Bufanda',
-    imageUri: null,
+    imageUris: [],
+    description: '',
     tags: [],
     createdAt: 1_700_000_001_000,
   },

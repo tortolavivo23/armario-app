@@ -11,14 +11,16 @@ const STORED: Garment[] = [
   {
     id: 'a',
     name: 'Camisa vaquera',
-    imageUri: 'file:///documents/garments/a.jpg',
+    imageUris: ['file:///documents/garments/a.jpg'],
+    description: '',
     tags: ['casual'],
     createdAt: 1_700_000_000_000,
   },
   {
     id: 'b',
     name: 'Bufanda',
-    imageUri: null,
+    imageUris: [],
+    description: '',
     tags: [],
     createdAt: 1_700_000_001_000,
   },
@@ -58,7 +60,7 @@ describe('addGarment', () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.addGarment({ name: 'Gorro', imageUri: null, tags: ['invierno'] });
+      await result.current.addGarment({ name: 'Gorro', imageUris: [], description: '', tags: ['invierno'] });
     });
 
     expect(result.current.garments[0].name).toBe('Gorro');
@@ -66,14 +68,14 @@ describe('addGarment', () => {
   });
 
   // Regression: adding a garment without a photo used to be impossible.
-  it('accepts a garment with no image and stores null', async () => {
+  it('accepts a garment with no image and stores an empty list', async () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.addGarment({ name: 'Gorro', imageUri: null, tags: [] });
+      await result.current.addGarment({ name: 'Gorro', imageUris: [], description: '', tags: [] });
     });
 
-    expect(result.current.garments[0].imageUri).toBeNull();
+    expect(result.current.garments[0].imageUris).toEqual([]);
     expect(persistImage).not.toHaveBeenCalled();
   });
 
@@ -81,18 +83,18 @@ describe('addGarment', () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.addGarment({ name: 'Gorro', imageUri: 'file:///picked.jpg', tags: [] });
+      await result.current.addGarment({ name: 'Gorro', imageUris: ['file:///picked.jpg'], description: '', tags: [] });
     });
 
     expect(persistImage).toHaveBeenCalledTimes(1);
-    expect(result.current.garments[0].imageUri).toMatch(/^file:\/\/\/documents\/garments\//);
+    expect(result.current.garments[0].imageUris[0]).toMatch(/^file:\/\/\/documents\/garments\//);
   });
 
   it('writes the updated list back to AsyncStorage', async () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.addGarment({ name: 'Gorro', imageUri: null, tags: [] });
+      await result.current.addGarment({ name: 'Gorro', imageUris: [], description: '', tags: [] });
     });
 
     await waitFor(async () => {
@@ -105,8 +107,8 @@ describe('addGarment', () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.addGarment({ name: 'Uno', imageUri: null, tags: [] });
-      await result.current.addGarment({ name: 'Dos', imageUri: null, tags: [] });
+      await result.current.addGarment({ name: 'Uno', imageUris: [], description: '', tags: [] });
+      await result.current.addGarment({ name: 'Dos', imageUris: [], description: '', tags: [] });
     });
 
     const ids = result.current.garments.map((g) => g.id);
@@ -122,7 +124,8 @@ describe('updateGarment', () => {
     await act(async () => {
       await result.current.updateGarment('a', {
         name: 'Camisa azul',
-        imageUri: 'file:///documents/garments/a.jpg',
+        imageUris: ['file:///documents/garments/a.jpg'],
+        description: '',
         tags: ['formal', 'azul'],
       });
     });
@@ -143,7 +146,8 @@ describe('updateGarment', () => {
     await act(async () => {
       await result.current.updateGarment('a', {
         name: 'Camisa azul',
-        imageUri: 'file:///documents/garments/a.jpg',
+        imageUris: ['file:///documents/garments/a.jpg'],
+        description: '',
         tags: [],
       });
     });
@@ -159,7 +163,8 @@ describe('updateGarment', () => {
     await act(async () => {
       await result.current.updateGarment('a', {
         name: 'Camisa vaquera',
-        imageUri: 'file:///picked/new.jpg',
+        imageUris: ['file:///picked/new.jpg'],
+        description: '',
         tags: [],
       });
     });
@@ -173,11 +178,11 @@ describe('updateGarment', () => {
     const { result } = await renderWardrobe();
 
     await act(async () => {
-      await result.current.updateGarment('a', { name: 'Camisa', imageUri: null, tags: [] });
+      await result.current.updateGarment('a', { name: 'Camisa', imageUris: [], description: '', tags: [] });
     });
 
     expect(deletePersistedImage).toHaveBeenCalledWith('file:///documents/garments/a.jpg');
-    expect(result.current.garments.find((g) => g.id === 'a')?.imageUri).toBeNull();
+    expect(result.current.garments.find((g) => g.id === 'a')?.imageUris).toEqual([]);
   });
 
   it('adds an image to a garment that had none', async () => {
@@ -187,13 +192,14 @@ describe('updateGarment', () => {
     await act(async () => {
       await result.current.updateGarment('b', {
         name: 'Bufanda',
-        imageUri: 'file:///picked/new.jpg',
+        imageUris: ['file:///picked/new.jpg'],
+        description: '',
         tags: [],
       });
     });
 
     expect(deletePersistedImage).not.toHaveBeenCalled();
-    expect(result.current.garments.find((g) => g.id === 'b')?.imageUri).toMatch(/garments/);
+    expect(result.current.garments.find((g) => g.id === 'b')?.imageUris[0]).toMatch(/garments/);
   });
 
   it('ignores an unknown id', async () => {
@@ -203,7 +209,8 @@ describe('updateGarment', () => {
     await act(async () => {
       await result.current.updateGarment('does-not-exist', {
         name: 'X',
-        imageUri: null,
+        imageUris: [],
+        description: '',
         tags: [],
       });
     });

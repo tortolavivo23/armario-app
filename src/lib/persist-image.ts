@@ -10,13 +10,18 @@ function getGarmentsDirectory() {
   return directory;
 }
 
-/** Copies a picked image into the app's persistent storage and returns its stable local uri. */
-export async function persistImage(sourceUri: string, id: string): Promise<string> {
+/**
+ * Copies a picked image into the app's persistent storage and returns its stable
+ * local uri. The file name is unique per call, since one garment can hold
+ * several photos.
+ */
+export async function persistImage(sourceUri: string): Promise<string> {
   const extensionMatch = sourceUri.match(/\.[a-zA-Z0-9]+$/);
   const extension = extensionMatch ? extensionMatch[0] : '.jpg';
+  const fileName = `${Date.now()}-${Math.floor(Math.random() * 1e6)}${extension}`;
 
   const sourceFile = new File(sourceUri);
-  const destinationFile = new File(getGarmentsDirectory(), `${id}${extension}`);
+  const destinationFile = new File(getGarmentsDirectory(), fileName);
 
   await sourceFile.copy(destinationFile);
   return destinationFile.uri;

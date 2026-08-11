@@ -28,7 +28,12 @@ export function GarmentEditModal({ garment, onClose }: GarmentEditModalProps) {
               subtitle="Cambia el nombre, la foto o las etiquetas"
               submitLabel="Guardar cambios"
               savingLabel="Guardando…"
-              initialValues={{ name: garment.name, imageUri: garment.imageUri, tags: garment.tags }}
+              initialValues={{
+                name: garment.name,
+                imageUris: garment.imageUris,
+                description: garment.description,
+                tags: garment.tags,
+              }}
               onCancel={onClose}
               onSubmit={async (values) => {
                 await updateGarment(garment.id, values);

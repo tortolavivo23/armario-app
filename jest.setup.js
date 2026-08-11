@@ -24,7 +24,7 @@ jest.mock('expo-router', () => ({
 
 // The wardrobe context copies picked images into app storage; tests stub that filesystem work out.
 jest.mock('@/lib/persist-image', () => ({
-  persistImage: jest.fn(async (uri, id) => `file:///documents/garments/${id}.jpg`),
+  persistImage: jest.fn(async (uri) => `file:///documents/garments/${uri.split('/').pop()}`),
   deletePersistedImage: jest.fn(),
 }));
 

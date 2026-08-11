@@ -14,7 +14,8 @@ function makeGarments(count: number): Garment[] {
   return Array.from({ length: count }, (_, index) => ({
     id: String(index),
     name: `Prenda ${index}`,
-    imageUri: null,
+    imageUris: [],
+    description: '',
     tags: [],
     createdAt: index,
   }));

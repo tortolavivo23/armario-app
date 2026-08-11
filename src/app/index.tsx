@@ -5,7 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GarmentCard } from '@/components/garment-card';
 import { GarmentDetailModal } from '@/components/garment-detail-modal';
 import { GarmentEditModal } from '@/components/garment-edit-modal';
+import { OverflowMenu } from '@/components/overflow-menu';
 import { TagChip } from '@/components/tag-chip';
+import { TagsManagerModal } from '@/components/tags-manager-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
@@ -20,9 +22,10 @@ import { useTheme } from '@/hooks/use-theme';
 
 const GRID_PADDING = Spacing.four;
 const GRID_GAP = Spacing.three;
+const UNGROUPED = '__ungrouped__';
 
 export default function WardrobeScreen() {
-  const { garments, isLoading, removeGarment } = useWardrobe();
+  const { garments, isLoading, removeGarment, getTag } = useWardrobe();
   const theme = useTheme();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -31,6 +34,7 @@ export default function WardrobeScreen() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isManagingTags, setIsManagingTags] = useState(false);
 
   const selectedGarment = garments.find((g) => g.id === selectedId) ?? null;
   const editingGarment = garments.find((g) => g.id === editingId) ?? null;
@@ -39,6 +43,25 @@ export default function WardrobeScreen() {
     () => Array.from(new Set(garments.flatMap((g) => g.tags))).sort((a, b) => a.localeCompare(b)),
     [garments],
   );
+
+  // Filter chips are laid out under their group heading, so "estación" and
+  // "tipo" read as separate rows instead of one long jumble.
+  const groupedTags = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    allTags.forEach((name) => {
+      const key = getTag(name).group ?? UNGROUPED;
+      groups.set(key, [...(groups.get(key) ?? []), name]);
+    });
+
+    return Array.from(groups.entries()).sort(([a], [b]) => {
+      if (a === UNGROUPED) return 1;
+      if (b === UNGROUPED) return -1;
+      return a.localeCompare(b);
+    });
+  }, [allTags, getTag]);
+
+  /** Groups only earn a heading once there is more than one of them. */
+  const showGroupLabels = groupedTags.length > 1;
 
   const filteredGarments = useMemo(() => {
     const trimmedQuery = query.trim().toLowerCase();
@@ -81,6 +104,19 @@ export default function WardrobeScreen() {
           </ThemedText>
         </View>
       )}
+
+      <View style={styles.titleSpacer} />
+
+      <OverflowMenu
+        items={[
+          {
+            label: 'Gestionar etiquetas',
+            icon: '🏷️',
+            testID: 'menu-manage-tags',
+            onPress: () => setIsManagingTags(true),
+          },
+        ]}
+      />
     </View>
   );
 
@@ -128,14 +164,27 @@ export default function WardrobeScreen() {
       {garments.length > 0 && (
         <>
           {allTags.length > 0 && (
-            <View testID="wardrobe-tag-filter" style={styles.tagFilter}>
-              {allTags.map((tag) => (
-                <TagChip
-                  key={tag}
-                  label={tag}
-                  selected={selectedTags.includes(tag)}
-                  onPress={() => toggleTag(tag)}
-                />
+            <View testID="wardrobe-tag-filter" style={styles.tagFilterGroups}>
+              {groupedTags.map(([group, groupTags]) => (
+                <View key={group} style={styles.tagFilterGroup}>
+                  {showGroupLabels && (
+                    <ThemedText type="smallBold" themeColor="textSecondary" style={styles.groupLabel}>
+                      {group === UNGROUPED ? 'OTRAS' : group.toUpperCase()}
+                    </ThemedText>
+                  )}
+
+                  <View style={styles.tagFilter}>
+                    {groupTags.map((tag) => (
+                      <TagChip
+                        key={tag}
+                        label={tag}
+                        color={getTag(tag).color}
+                        selected={selectedTags.includes(tag)}
+                        onPress={() => toggleTag(tag)}
+                      />
+                    ))}
+                  </View>
+                </View>
               ))}
             </View>
           )}
@@ -223,6 +272,8 @@ export default function WardrobeScreen() {
         />
 
         <GarmentEditModal garment={editingGarment} onClose={() => setEditingId(null)} />
+
+        <TagsManagerModal visible={isManagingTags} onClose={() => setIsManagingTags(false)} />
       </SafeAreaView>
     </ThemedView>
   );
@@ -268,6 +319,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
+  titleSpacer: {
+    flex: 1,
+  },
   title: {
     fontSize: 30,
     lineHeight: 38,
@@ -302,6 +356,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     paddingVertical: Spacing.two,
+  },
+  tagFilterGroups: {
+    gap: Spacing.three,
+  },
+  tagFilterGroup: {
+    gap: Spacing.one,
+  },
+  groupLabel: {
+    letterSpacing: 0.6,
+    fontSize: 11,
   },
   tagFilter: {
     flexDirection: 'row',
