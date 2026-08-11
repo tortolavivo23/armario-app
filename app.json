@@ -32,6 +32,13 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite a Armario acceder a tus fotos para subir imágenes de tus prendas.",
+          "cameraPermission": "Permite a Armario usar la cámara para fotografiar tus prendas."
+        }
       ]
     ],
     "experiments": {

@@ -1,61 +1,56 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
+import { GarmentCard } from '@/components/garment-card';
+import { GarmentDetailModal } from '@/components/garment-detail-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useWardrobe } from '@/context/wardrobe-context';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+export default function WardrobeScreen() {
+  const { garments, isLoading, removeGarment } = useWardrobe();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedGarment = garments.find((g) => g.id === selectedId) ?? null;
 
-export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ThemedText type="title" style={styles.title}>
+          Mi armario
         </ThemedText>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        {!isLoading && garments.length === 0 && (
+          <ThemedView type="backgroundElement" style={styles.emptyState}>
+            <ThemedText type="subtitle" style={styles.emptyTitle}>
+              Todavía no hay prendas
+            </ThemedText>
+            <ThemedText themeColor="textSecondary" style={styles.emptyHint}>
+              Ve a la pestaña Añadir para subir tu primera prenda.
+            </ThemedText>
+          </ThemedView>
+        )}
 
-        {Platform.OS === 'web' && <WebBadge />}
+        <FlatList
+          data={garments}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <GarmentCard garment={item} onPress={() => setSelectedId(item.id)} />
+          )}
+        />
+
+        <GarmentDetailModal
+          garment={selectedGarment}
+          onClose={() => setSelectedId(null)}
+          onDelete={(id) => {
+            removeGarment(id);
+            setSelectedId(null);
+          }}
+        />
       </SafeAreaView>
     </ThemedView>
   );
@@ -64,35 +59,39 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    alignItems: 'center',
   },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
+    width: '100%',
     maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    alignSelf: 'center',
   },
   title: {
-    textAlign: 'center',
+    fontSize: 32,
+    lineHeight: 40,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
   },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
+  list: {
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+    paddingBottom: BottomTabInset + Spacing.three,
+    gap: Spacing.three,
   },
+  row: {
+    gap: Spacing.three,
+  },
+  emptyState: {
+    marginHorizontal: Spacing.three,
+    marginBottom: Spacing.three,
+    padding: Spacing.four,
+    borderRadius: Spacing.four,
+    gap: Spacing.one,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  emptyHint: {},
 });
