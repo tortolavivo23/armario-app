@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import { WardrobeProvider, useWardrobe } from '@/context/wardrobe-context';
+import { AppProviders } from '@/context/providers';
+import { useWardrobe } from '@/context/wardrobe-context';
 import { deletePersistedImage, persistImage } from '@/lib/persist-image';
 import { Garment } from '@/types/garment';
 
@@ -27,7 +28,7 @@ const STORED: Garment[] = [
 ];
 
 async function renderWardrobe() {
-  const view = await renderHook(() => useWardrobe(), { wrapper: WardrobeProvider });
+  const view = await renderHook(() => useWardrobe(), { wrapper: AppProviders });
   await waitFor(() => expect(view.result.current.isLoading).toBe(false));
   return view;
 }

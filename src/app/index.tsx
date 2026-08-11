@@ -17,6 +17,7 @@ import {
   Radius,
   Spacing,
 } from '@/constants/theme';
+import { useThemePreference } from '@/context/theme-context';
 import { useWardrobe } from '@/context/wardrobe-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -25,6 +26,7 @@ const GRID_GAP = Spacing.three;
 
 export default function WardrobeScreen() {
   const { garments, isLoading, removeGarment } = useWardrobe();
+  const { isDark, toggleDark } = useThemePreference();
   const theme = useTheme();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -94,6 +96,13 @@ export default function WardrobeScreen() {
             icon: '🏷️',
             testID: 'menu-manage-tags',
             onPress: () => setIsManagingTags(true),
+          },
+          {
+            label: 'Modo oscuro',
+            icon: '🌙',
+            testID: 'menu-dark-mode',
+            switchValue: isDark,
+            onPress: toggleDark,
           },
         ]}
       />

@@ -8,7 +8,7 @@ const emptySubscribe = () => () => {};
  * `useSyncExternalStore` returns the server snapshot ('light') during hydration and the real
  * value afterwards, without the cascading re-render an effect would cause.
  */
-export function useColorScheme() {
+export function useSystemColorScheme() {
   const hasHydrated = useSyncExternalStore(
     emptySubscribe,
     () => true,

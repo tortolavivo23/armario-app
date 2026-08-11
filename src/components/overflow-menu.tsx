@@ -1,15 +1,20 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
 
-import { CardShadow, Radius, Spacing } from '@/constants/theme';
+import { Accent, CardShadow, Radius, Spacing, tagTint } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type OverflowMenuItem = {
   label: string;
   icon?: string;
   onPress: () => void;
+  /**
+   * Turns the row into a switch showing this value. Switch rows leave the menu
+   * open, so the change can be seen taking effect behind it.
+   */
+  switchValue?: boolean;
   testID?: string;
 };
 
@@ -55,22 +60,45 @@ export function OverflowMenu({ items, testID = 'overflow-menu' }: OverflowMenuPr
               CardShadow,
               { backgroundColor: theme.backgroundElement, borderColor: theme.border },
             ]}>
-            {items.map((item) => (
-              <Pressable
-                key={item.label}
-                testID={item.testID}
-                onPress={() => {
-                  setOpen(false);
-                  item.onPress();
-                }}
-                style={({ pressed }) => [
-                  styles.item,
-                  pressed && { backgroundColor: theme.backgroundSelected },
-                ]}>
-                {item.icon && <ThemedText style={styles.itemIcon}>{item.icon}</ThemedText>}
-                <ThemedText type="smallBold">{item.label}</ThemedText>
-              </Pressable>
-            ))}
+            {items.map((item, index) => {
+              const isSwitch = item.switchValue != null;
+
+              return (
+                <View key={item.label}>
+                  {index > 0 && <View style={[styles.divider, { backgroundColor: theme.border }]} />}
+
+                  <Pressable
+                    testID={item.testID}
+                    accessibilityRole={isSwitch ? 'switch' : 'button'}
+                    accessibilityState={isSwitch ? { checked: item.switchValue } : undefined}
+                    onPress={() => {
+                      if (!isSwitch) setOpen(false);
+                      item.onPress();
+                    }}
+                    style={({ pressed }) => [
+                      styles.item,
+                      pressed && { backgroundColor: theme.backgroundSelected },
+                    ]}>
+                    {item.icon && <ThemedText style={styles.itemIcon}>{item.icon}</ThemedText>}
+                    <ThemedText type="smallBold" style={styles.itemLabel}>
+                      {item.label}
+                    </ThemedText>
+
+                    {isSwitch && (
+                      // The row already handles the tap; the switch is only the
+                      // indicator, so it must not swallow the touch.
+                      <View pointerEvents="none">
+                        <Switch
+                          value={item.switchValue}
+                          trackColor={{ false: theme.backgroundSelected, true: tagTint(Accent, 0.5) }}
+                          thumbColor={item.switchValue ? Accent : theme.backgroundElement}
+                        />
+                      </View>
+                    )}
+                  </Pressable>
+                </View>
+              );
+            })}
           </View>
         </Pressable>
       </Modal>
@@ -102,11 +130,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
   },
   sheet: {
-    minWidth: 220,
+    minWidth: 240,
     borderRadius: Radius.medium,
     borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: Spacing.one,
     overflow: 'hidden',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: Spacing.one,
   },
   item: {
     flexDirection: 'row',
@@ -117,5 +149,8 @@ const styles = StyleSheet.create({
   },
   itemIcon: {
     fontSize: 16,
+  },
+  itemLabel: {
+    flex: 1,
   },
 });

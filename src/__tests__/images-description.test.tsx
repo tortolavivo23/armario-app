@@ -4,7 +4,8 @@ import * as ImagePicker from 'expo-image-picker';
 
 import WardrobeScreen from '@/app/index';
 import { GarmentForm } from '@/components/garment-form';
-import { WardrobeProvider, useWardrobe } from '@/context/wardrobe-context';
+import { AppProviders } from '@/context/providers';
+import { useWardrobe } from '@/context/wardrobe-context';
 import { deletePersistedImage, persistImage } from '@/lib/persist-image';
 import { Garment, migrateGarment } from '@/types/garment';
 
@@ -18,7 +19,7 @@ const GARMENT: Garment = {
 };
 
 async function renderContext() {
-  const view = await renderHook(() => useWardrobe(), { wrapper: WardrobeProvider });
+  const view = await renderHook(() => useWardrobe(), { wrapper: AppProviders });
   await waitFor(() => expect(view.result.current.isLoading).toBe(false));
   return view;
 }
@@ -26,7 +27,7 @@ async function renderContext() {
 async function renderForm(initialValues?: React.ComponentProps<typeof GarmentForm>['initialValues']) {
   const onSubmit = jest.fn().mockResolvedValue(undefined);
   await render(
-    <WardrobeProvider>
+    <AppProviders>
       <GarmentForm
         title="Nueva prenda"
         submitLabel="Guardar"
@@ -34,7 +35,7 @@ async function renderForm(initialValues?: React.ComponentProps<typeof GarmentFor
         initialValues={initialValues}
         onSubmit={onSubmit}
       />
-    </WardrobeProvider>,
+    </AppProviders>,
   );
   return { onSubmit };
 }
@@ -203,9 +204,9 @@ describe('several photos per garment', () => {
   it('shows only the cover in the grid, with a photo counter', async () => {
     await AsyncStorage.setItem('wardrobe-garments', JSON.stringify([GARMENT]));
     await render(
-      <WardrobeProvider>
+      <AppProviders>
         <WardrobeScreen />
-      </WardrobeProvider>,
+      </AppProviders>,
     );
 
     await screen.findByText('Camisa vaquera');
@@ -215,9 +216,9 @@ describe('several photos per garment', () => {
   it('opens a swipeable gallery in the detail view', async () => {
     await AsyncStorage.setItem('wardrobe-garments', JSON.stringify([GARMENT]));
     await render(
-      <WardrobeProvider>
+      <AppProviders>
         <WardrobeScreen />
-      </WardrobeProvider>,
+      </AppProviders>,
     );
 
     await fireEvent.press(await screen.findByText('Camisa vaquera'));
@@ -268,9 +269,9 @@ describe('garment description', () => {
   it('shows the description in the detail view but not in the grid', async () => {
     await AsyncStorage.setItem('wardrobe-garments', JSON.stringify([GARMENT]));
     await render(
-      <WardrobeProvider>
+      <AppProviders>
         <WardrobeScreen />
-      </WardrobeProvider>,
+      </AppProviders>,
     );
 
     await screen.findByText('Camisa vaquera');
@@ -288,9 +289,9 @@ describe('garment description', () => {
       JSON.stringify([{ ...GARMENT, description: '' }]),
     );
     await render(
-      <WardrobeProvider>
+      <AppProviders>
         <WardrobeScreen />
-      </WardrobeProvider>,
+      </AppProviders>,
     );
 
     await fireEvent.press(await screen.findByText('Camisa vaquera'));

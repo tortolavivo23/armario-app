@@ -2,13 +2,13 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import * as ImagePicker from 'expo-image-picker';
 
 import { GarmentForm, type GarmentFormValues } from '@/components/garment-form';
-import { WardrobeProvider } from '@/context/wardrobe-context';
+import { AppProviders } from '@/context/providers';
 
 async function renderForm(overrides: Partial<React.ComponentProps<typeof GarmentForm>> = {}) {
   const onSubmit = jest.fn<Promise<void>, [GarmentFormValues]>().mockResolvedValue(undefined);
 
   await render(
-    <WardrobeProvider>
+    <AppProviders>
       <GarmentForm
         title="Nueva prenda"
         submitLabel="Guardar prenda"
@@ -16,7 +16,7 @@ async function renderForm(overrides: Partial<React.ComponentProps<typeof Garment
         onSubmit={onSubmit}
         {...overrides}
       />
-    </WardrobeProvider>,
+    </AppProviders>,
   );
 
   return { onSubmit };

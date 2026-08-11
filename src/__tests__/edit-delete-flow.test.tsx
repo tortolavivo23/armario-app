@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { Alert } from 'react-native';
 
 import WardrobeScreen from '@/app/index';
-import { WardrobeProvider } from '@/context/wardrobe-context';
+import { AppProviders } from '@/context/providers';
 import { Garment } from '@/types/garment';
 
 const GARMENTS: Garment[] = [
@@ -28,9 +28,9 @@ const GARMENTS: Garment[] = [
 async function renderWardrobe() {
   await AsyncStorage.setItem('wardrobe-garments', JSON.stringify(GARMENTS));
   await render(
-    <WardrobeProvider>
+    <AppProviders>
       <WardrobeScreen />
-    </WardrobeProvider>,
+    </AppProviders>,
   );
   await screen.findByText('Camisa vaquera');
 }

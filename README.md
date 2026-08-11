@@ -34,7 +34,8 @@ server, no account, no internet connection required.
   garments untouched; deleting a garment removes it from the outfits that were wearing it.
 - **Full device rotation** (portrait, landscape and upside-down portrait), with a grid that adapts
   its column count to the available width.
-- **Light and dark mode**, following the system setting.
+- **Light and dark mode**: follows the system setting until you touch the **dark mode switch** in
+  the ⋯ menu, from which point your choice is pinned and remembered between launches.
 - **Persistent local storage**: the garment list lives in AsyncStorage and photos are copied into
   the app's private storage, so they survive even if you delete the original from your gallery.
 
@@ -48,8 +49,10 @@ server, no account, no internet connection required.
   - **JDK 17** (for example [Eclipse Temurin 17](https://adoptium.net/temurin/releases/?version=17))
   - **Android SDK** (installed with [Android Studio](https://developer.android.com/studio))
 
-> The JDK bundled with Android Studio may be too new (JDK 21+) and break the native build. If it
-> fails, point `JAVA_HOME` at a JDK 17 installation.
+> The JDK bundled with Android Studio (its `jbr` directory) is usually too new — JDK 21, 25 or
+> later — and breaks the native build with a misleading CMake error: *"A restricted method in
+> `java.lang.System` has been called"*. If `JAVA_HOME` points there, set it to a JDK 17 installation
+> before building.
 
 ---
 
@@ -112,6 +115,7 @@ npm test
 | `responsive-grid.test.tsx` | Column count and card width in portrait, landscape and on wide screens |
 | `tags.test.tsx` | Tag catalogue, colours, groups, auto-registration, the ⋯ menu, the tag manager and the grouped filter |
 | `images-description.test.tsx` | Several photos per garment, the gallery, the description field, tag autocomplete and the storage migration |
+| `theme.test.tsx` | The light/dark preference, its persistence, and the dark mode switch in the ⋯ menu |
 | `outfits.test.tsx` | Outfit storage, no repeated garment within an outfit, one garment across many outfits, the outfits screen with its search and filter, and the create/edit/delete flows |
 
 > **On Selenium:** Selenium drives web browsers, so it does not apply to a native React Native app.
@@ -150,7 +154,7 @@ commits since the previous release.
 still build and upload the artifact, but reuse the existing release rather than
 overwriting it.
 
-Versions carrying a semver pre-release identifier — the current `0.1.0-alpha.3`,
+Versions carrying a semver pre-release identifier — the current `0.1.0-alpha.4`,
 for instance — are published as GitHub pre-releases, so they are not offered as
 the latest stable download. Dropping the suffix (`0.1.0`) publishes a normal
 release.
@@ -230,6 +234,8 @@ armario-app/
 │   │   ├── tag-chip.tsx
 │   │   └── button.tsx
 │   ├── context/
+│   │   ├── providers.tsx       # The provider stack, shared by the app and the tests
+│   │   ├── theme-context.tsx   # Light/dark preference
 │   │   └── wardrobe-context.tsx  # Global state and persistence
 │   ├── lib/
 │   │   └── persist-image.ts    # Copies photos into the app's storage
@@ -272,6 +278,15 @@ armario-app/
   means the rule holds even for data that did not come through the picker.
 - **Outfits are stored under their own key** (`wardrobe-outfits`), so an install that predates them
   simply loads an empty list — no migration needed.
+- **The colour scheme goes through the app's own context**, not React Native's `useColorScheme`
+  directly, so a stored preference can override the device setting. The hook falls back to the
+  system value when no provider is mounted, which keeps a screen renderable on its own.
+- **The stored preference has three states but the UI has two.** It starts at `system`, so an
+  untouched install keeps following the device; flipping the switch writes `light` or `dark` and
+  pins it. The switch itself only ever shows the scheme currently on screen, so its position never
+  lies about what you are looking at.
+- **The tab bar sets `tintColor` as well as `indicatorColor`.** The indicator is a pill drawn behind
+  the selected icon; leaving it the same colour as the bar made that icon invisible.
 
 ---
 

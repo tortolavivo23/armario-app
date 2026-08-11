@@ -4,7 +4,7 @@ import { Dimensions, StyleSheet } from 'react-native';
 
 import WardrobeScreen from '@/app/index';
 import { MaxContentWidth, MinCardWidth, Spacing } from '@/constants/theme';
-import { WardrobeProvider } from '@/context/wardrobe-context';
+import { AppProviders } from '@/context/providers';
 import { Garment } from '@/types/garment';
 
 const GRID_PADDING = Spacing.four;
@@ -38,9 +38,9 @@ function cardWidthFor(name: string) {
 async function renderWardrobe(garments: Garment[]) {
   await AsyncStorage.setItem('wardrobe-garments', JSON.stringify(garments));
   await render(
-    <WardrobeProvider>
+    <AppProviders>
       <WardrobeScreen />
-    </WardrobeProvider>,
+    </AppProviders>,
   );
   await waitFor(() => expect(screen.getByText(garments[0].name)).toBeOnTheScreen());
 }
