@@ -66,7 +66,9 @@ export function WardrobeSwitcher({ compact = false }: WardrobeSwitcherProps) {
               CardShadow,
               { backgroundColor: theme.backgroundElement, borderColor: theme.border },
             ]}>
-            <ScrollView bounces={false}>
+            {/* flexGrow: 0 keeps the sheet as short as its list; without it the
+                ScrollView stretches to the sheet's maxHeight and leaves a gap. */}
+            <ScrollView bounces={false} style={styles.list}>
               {options.map((option) => {
                 const isActive = option.key === activeWardrobe;
 
@@ -179,6 +181,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: Spacing.one,
     overflow: 'hidden',
+  },
+  list: {
+    flexGrow: 0,
   },
   item: {
     flexDirection: 'row',
