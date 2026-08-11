@@ -19,6 +19,9 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write # Needed to create the release and its tag.
+
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -52,16 +55,46 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Rename the APK with the commit sha
+      - name: Read the app version
+        id: version
+        run: echo "version=$(node -p "require('./app.json').expo.version")" >> "$GITHUB_OUTPUT"
+
+      - name: Name the APK after the version
         run: |
           mkdir -p dist
           cp android/app/build/outputs/apk/release/app-release.apk \
-             "dist/armario-app-${GITHUB_SHA::7}.apk"
+             "dist/armario-app-v${{ steps.version.outputs.version }}.apk"
 
-      - name: Upload the APK
+      - name: Upload the APK as a workflow artifact
         uses: actions/upload-artifact@v7
         with:
           name: armario-app-apk
           path: dist/*.apk
           retention-days: 30
           if-no-files-found: error
+
+      # Publishes v<version> from app.json. Bumping that version is what makes a
+      # new release appear; pushes that leave it untouched only get the artifact.
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Bump expo.version in app.json to publish a new one."
+            exit 0
+          fi
+
+          # A semver pre-release identifier (0.1.0-alpha.1) marks the release as
+          # a pre-release so it is not offered as the latest stable download.
+          PRERELEASE=""
+          case "$TAG" in
+            *-*) PRERELEASE="--prerelease" ;;
+          esac
+
+          # --generate-notes builds the changelog from the commits since the
+          # previous release on its own.
+          gh release create "$TAG" "dist/armario-app-$TAG.apk" \
+            --title "$TAG" \
+            --generate-notes \
+            $PRERELEASE
