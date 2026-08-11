@@ -132,6 +132,11 @@ commits since the previous release.
 still build and upload the artifact, but reuse the existing release rather than
 overwriting it.
 
+Versions carrying a semver pre-release identifier — the current `0.1.0-alpha.1`,
+for instance — are published as GitHub pre-releases, so they are not offered as
+the latest stable download. Dropping the suffix (`0.1.0`) publishes a normal
+release.
+
 If you ever publish to the Play Store, remember to bump `expo.android.versionCode`
 as well — Play rejects an upload whose version code has not increased.
 

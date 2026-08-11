@@ -85,8 +85,16 @@ jobs:
             exit 0
           fi
 
+          # A semver pre-release identifier (0.1.0-alpha.1) marks the release as
+          # a pre-release so it is not offered as the latest stable download.
+          PRERELEASE=""
+          case "$TAG" in
+            *-*) PRERELEASE="--prerelease" ;;
+          esac
+
           # --generate-notes builds the changelog from the commits since the
           # previous release on its own.
           gh release create "$TAG" "dist/armario-app-$TAG.apk" \
             --title "$TAG" \
-            --generate-notes
+            --generate-notes \
+            $PRERELEASE
