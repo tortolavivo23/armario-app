@@ -111,14 +111,29 @@ Two GitHub Actions workflows live in [`.github/workflows`](.github/workflows):
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
 | `ci.yml` | Every pull request targeting `main` | Type-checks, lints and runs the test suite, and uploads the coverage report |
-| `release.yml` | Every push to `main`, plus manual dispatch | Re-runs `ci.yml`, then builds a release APK and uploads it as a workflow artifact |
+| `release.yml` | Every push to `main`, plus manual dispatch | Re-runs `ci.yml`, builds a release APK, and publishes it as a GitHub release |
 
 `release.yml` calls `ci.yml` as a reusable workflow rather than duplicating the
 steps, so an APK can never be produced from a commit whose tests failed.
 
-The built APK is attached to the workflow run as an artifact named
-`armario-app-apk`, with the short commit sha in the file name. Download it from
-the run's summary page under **Artifacts**.
+### Releases
+
+The APK is always attached to the workflow run as an artifact named
+`armario-app-apk`, downloadable from the run's summary page under **Artifacts**.
+
+On top of that, the workflow publishes a [GitHub
+release](../../releases) tagged `v<version>`, where the version comes from
+`expo.version` in `app.json`. The APK is attached to it as
+`armario-app-v<version>.apk`, and the release notes are generated from the
+commits since the previous release.
+
+**Cutting a new release is therefore a one-line change:** bump `expo.version` in
+`app.json` and merge it into `main`. Pushes that leave the version untouched
+still build and upload the artifact, but reuse the existing release rather than
+overwriting it.
+
+If you ever publish to the Play Store, remember to bump `expo.android.versionCode`
+as well — Play rejects an upload whose version code has not increased.
 
 The APK is signed with the debug keystore that `expo prebuild` generates, so the
 build needs no secrets. That is fine for testing, but a Play Store release would
