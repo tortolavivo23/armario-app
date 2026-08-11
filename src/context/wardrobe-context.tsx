@@ -4,15 +4,24 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { DefaultTagColor, TagColors } from '@/constants/theme';
 import { deletePersistedImage, persistImage } from '@/lib/persist-image';
 import { Garment, migrateGarment } from '@/types/garment';
+import { Outfit, uniqueGarmentIds } from '@/types/outfit';
 import { Tag } from '@/types/tag';
 
 const STORAGE_KEY = 'wardrobe-garments';
 const TAGS_STORAGE_KEY = 'wardrobe-tags';
+const OUTFITS_STORAGE_KEY = 'wardrobe-outfits';
 
 type GarmentInput = {
   name: string;
   /** Mix of already-persisted uris and freshly picked ones, in display order. */
   imageUris: string[];
+  description: string;
+  tags: string[];
+};
+
+type OutfitInput = {
+  name: string;
+  garmentIds: string[];
   description: string;
   tags: string[];
 };
@@ -24,11 +33,15 @@ type TagInput = {
 
 type WardrobeContextValue = {
   garments: Garment[];
+  outfits: Outfit[];
   tags: Tag[];
   isLoading: boolean;
   addGarment: (garment: GarmentInput) => Promise<void>;
   updateGarment: (id: string, garment: GarmentInput) => Promise<void>;
   removeGarment: (id: string) => Promise<void>;
+  addOutfit: (outfit: OutfitInput) => Promise<void>;
+  updateOutfit: (id: string, outfit: OutfitInput) => Promise<void>;
+  removeOutfit: (id: string) => Promise<void>;
   /** Returns the catalogue entry for a tag name, inventing a default one if it is unknown. */
   getTag: (name: string) => Tag;
   /** Creates the tag if new, otherwise patches the fields given. */
@@ -51,14 +64,20 @@ function normalizeGroup(group: string | null | undefined) {
 
 export function WardrobeProvider({ children }: { children: ReactNode }) {
   const [garments, setGarments] = useState<Garment[]>([]);
+  const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(TAGS_STORAGE_KEY)])
-      .then(([rawGarments, rawTags]) => {
+    Promise.all([
+      AsyncStorage.getItem(STORAGE_KEY),
+      AsyncStorage.getItem(TAGS_STORAGE_KEY),
+      AsyncStorage.getItem(OUTFITS_STORAGE_KEY),
+    ])
+      .then(([rawGarments, rawTags, rawOutfits]) => {
         if (rawGarments) setGarments(JSON.parse(rawGarments).map(migrateGarment));
         if (rawTags) setTags(JSON.parse(rawTags));
+        if (rawOutfits) setOutfits(JSON.parse(rawOutfits));
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -73,8 +92,13 @@ export function WardrobeProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
   }, [tags, isLoading]);
 
-  // Tags typed into a garment form are registered here so they get a colour
-  // without the user having to visit the tag screen first.
+  useEffect(() => {
+    if (isLoading) return;
+    AsyncStorage.setItem(OUTFITS_STORAGE_KEY, JSON.stringify(outfits));
+  }, [outfits, isLoading]);
+
+  // Tags typed into a garment or an outfit form are registered here so they get
+  // a colour without the user having to visit the tag manager first.
   const registerTags = useCallback((names: string[]) => {
     setTags((current) => {
       const known = new Set(current.map((tag) => tag.name));
@@ -100,6 +124,7 @@ export function WardrobeProvider({ children }: { children: ReactNode }) {
   const value = useMemo<WardrobeContextValue>(
     () => ({
       garments,
+      outfits,
       tags,
       isLoading,
       getTag,
@@ -175,9 +200,52 @@ export function WardrobeProvider({ children }: { children: ReactNode }) {
           garment?.imageUris.forEach((uri) => deletePersistedImage(uri));
           return current.filter((item) => item.id !== id);
         });
+
+        // Outfits reference garments rather than copying them, so a deleted
+        // garment has to be dropped from the outfits wearing it.
+        setOutfits((current) =>
+          current.map((outfit) =>
+            outfit.garmentIds.includes(id)
+              ? { ...outfit, garmentIds: outfit.garmentIds.filter((item) => item !== id) }
+              : outfit,
+          ),
+        );
+      },
+      addOutfit: async ({ name, garmentIds, description, tags: outfitTags }) => {
+        const outfit: Outfit = {
+          id: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+          name,
+          // A garment can be worn in many outfits, but only once within one.
+          garmentIds: uniqueGarmentIds(garmentIds),
+          description,
+          tags: outfitTags,
+          createdAt: Date.now(),
+        };
+        registerTags(outfitTags);
+        setOutfits((current) => [outfit, ...current]);
+      },
+      updateOutfit: async (id, { name, garmentIds, description, tags: outfitTags }) => {
+        registerTags(outfitTags);
+        setOutfits((current) =>
+          current.map((outfit) =>
+            outfit.id === id
+              ? {
+                  ...outfit,
+                  name,
+                  garmentIds: uniqueGarmentIds(garmentIds),
+                  description,
+                  tags: outfitTags,
+                }
+              : outfit,
+          ),
+        );
+      },
+      removeOutfit: async (id) => {
+        // Only the combination goes away; the garments stay in the wardrobe.
+        setOutfits((current) => current.filter((outfit) => outfit.id !== id));
       },
     }),
-    [garments, tags, isLoading, getTag, registerTags],
+    [garments, outfits, tags, isLoading, getTag, registerTags],
   );
 
   return <WardrobeContext.Provider value={value}>{children}</WardrobeContext.Provider>;

@@ -2,7 +2,8 @@
 
 A mobile app for keeping track of the clothes in your wardrobe. Add each garment with a name, as
 many photos as you like, a description and colour-coded tags, then find it later by searching its
-name or filtering by tag.
+name or filtering by tag. Garments can also be combined into **outfits**, saved sets you can name,
+describe and tag just like the garments themselves.
 
 Built with **React Native** and **Expo SDK 57**. Everything is stored on the device itself — no
 server, no account, no internet connection required.
@@ -24,8 +25,13 @@ server, no account, no internet connection required.
   have to be retyped.
 - **Filter by tags**, combinable: selecting several tags shows only the garments that carry **all**
   of them.
-- **Edit** any saved garment (name, photos, description and tags).
-- **Delete** garments, with a confirmation prompt.
+- **Outfits**, on their own tab: group garments you already own into a named set, with its own
+  description and tags. A garment can belong to any number of outfits but appears at most once in
+  each. Outfits have the same search and grouped tag filter as the wardrobe, and tapping a garment
+  inside an outfit opens it without leaving the tab.
+- **Edit** any saved garment (name, photos, description and tags) or outfit.
+- **Delete** garments and outfits, with a confirmation prompt. Deleting an outfit leaves its
+  garments untouched; deleting a garment removes it from the outfits that were wearing it.
 - **Full device rotation** (portrait, landscape and upside-down portrait), with a grid that adapts
   its column count to the available width.
 - **Light and dark mode**, following the system setting.
@@ -106,6 +112,7 @@ npm test
 | `responsive-grid.test.tsx` | Column count and card width in portrait, landscape and on wide screens |
 | `tags.test.tsx` | Tag catalogue, colours, groups, auto-registration, the ⋯ menu, the tag manager and the grouped filter |
 | `images-description.test.tsx` | Several photos per garment, the gallery, the description field, tag autocomplete and the storage migration |
+| `outfits.test.tsx` | Outfit storage, no repeated garment within an outfit, one garment across many outfits, the outfits screen with its search and filter, and the create/edit/delete flows |
 
 > **On Selenium:** Selenium drives web browsers, so it does not apply to a native React Native app.
 > The equivalent here is React Native Testing Library for component and integration tests (what this
@@ -143,7 +150,7 @@ commits since the previous release.
 still build and upload the artifact, but reuse the existing release rather than
 overwriting it.
 
-Versions carrying a semver pre-release identifier — the current `0.1.0-alpha.2`,
+Versions carrying a semver pre-release identifier — the current `0.1.0-alpha.3`,
 for instance — are published as GitHub pre-releases, so they are not offered as
 the latest stable download. Dropping the suffix (`0.1.0`) publishes a normal
 release.
@@ -201,17 +208,24 @@ armario-app/
 │   ├── app/                    # Screens (expo-router, file-based routing)
 │   │   ├── _layout.tsx         # Root layout: theme and data provider
 │   │   ├── index.tsx           # "My wardrobe": list, search and grouped filters
-│   │   ├── add.tsx             # "Add": new garment form
-│   │   └── tags.tsx            # "Tags": colours and groups for every tag
+│   │   ├── outfits.tsx         # "Outfits": saved combinations of garments
+│   │   └── add.tsx             # "Add": new garment form
 │   ├── components/             # Reusable components
 │   │   ├── garment-card.tsx    # Garment tile in the grid
 │   │   ├── garment-form.tsx    # Form shared by the add and edit flows
 │   │   ├── garment-gallery.tsx # Swipeable photo gallery for the detail view
+│   │   ├── garment-picker.tsx  # Garment multi-select used when building an outfit
 │   │   ├── garment-detail-modal.tsx
 │   │   ├── garment-edit-modal.tsx
 │   │   ├── garment-image.tsx   # Image with a fallback when there is no photo
+│   │   ├── outfit-card.tsx     # Outfit tile, with a collage of its garments
+│   │   ├── outfit-form.tsx     # Form shared by the create and edit flows
+│   │   ├── outfit-detail-modal.tsx
+│   │   ├── outfit-editor-modal.tsx
 │   │   ├── tags-manager-modal.tsx  # Tag list behind the ⋯ menu
 │   │   ├── tag-editor-modal.tsx  # Colour and group picker for one tag
+│   │   ├── tag-picker.tsx      # Tag input with autocomplete, shared by both forms
+│   │   ├── tag-filter.tsx      # Grouped filter chips, shared by both lists
 │   │   ├── overflow-menu.tsx   # "⋯" dropdown in the wardrobe header
 │   │   ├── tag-chip.tsx
 │   │   └── button.tsx
@@ -221,7 +235,7 @@ armario-app/
 │   │   └── persist-image.ts    # Copies photos into the app's storage
 │   ├── constants/theme.ts      # Colors, spacing, radii, tag palette
 │   ├── hooks/
-│   ├── types/                  # Garment and Tag shapes, plus the storage migration
+│   ├── types/                  # Garment, Outfit and Tag shapes, plus the storage migration
 │   └── __tests__/              # Regression tests
 ├── plugins/
 │   └── with-full-sensor-orientation.js   # Enables all four orientations on Android
@@ -250,6 +264,14 @@ armario-app/
 - **Stored garments are migrated on load** by `migrateGarment`, which turns the old single
   `imageUri` into an `imageUris` list and fills in a missing `description`. The migration runs in
   the provider, so the rest of the app only ever sees the current shape.
+- **Outfits reference garments by id** instead of copying them, so renaming a garment or adding a
+  photo to it shows up in every outfit at once. The cost is referential integrity, which the
+  provider handles: deleting a garment also removes its id from the outfits wearing it.
+- **"A garment at most once per outfit" is enforced in two places**: the picker is a toggle over a
+  set, and `addOutfit`/`updateOutfit` deduplicate the list before storing it. The second check
+  means the rule holds even for data that did not come through the picker.
+- **Outfits are stored under their own key** (`wardrobe-outfits`), so an install that predates them
+  simply loads an empty list — no migration needed.
 
 ---
 

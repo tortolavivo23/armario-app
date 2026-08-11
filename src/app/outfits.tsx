@@ -2,15 +2,16 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { GarmentCard } from '@/components/garment-card';
 import { GarmentDetailModal } from '@/components/garment-detail-modal';
 import { GarmentEditModal } from '@/components/garment-edit-modal';
-import { OverflowMenu } from '@/components/overflow-menu';
+import { OutfitCard } from '@/components/outfit-card';
+import { OutfitDetailModal } from '@/components/outfit-detail-modal';
+import { OutfitEditorModal } from '@/components/outfit-editor-modal';
 import { TagFilter } from '@/components/tag-filter';
-import { TagsManagerModal } from '@/components/tags-manager-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
+  Accent,
   BottomTabInset,
   MaxContentWidth,
   MinCardWidth,
@@ -23,8 +24,8 @@ import { useTheme } from '@/hooks/use-theme';
 const GRID_PADDING = Spacing.four;
 const GRID_GAP = Spacing.three;
 
-export default function WardrobeScreen() {
-  const { garments, isLoading, removeGarment } = useWardrobe();
+export default function OutfitsScreen() {
+  const { outfits, garments, isLoading, removeOutfit, removeGarment } = useWardrobe();
   const theme = useTheme();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -33,24 +34,31 @@ export default function WardrobeScreen() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [isManagingTags, setIsManagingTags] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  // A garment opened from inside an outfit, so it can be inspected without
+  // leaving the tab.
+  const [garmentId, setGarmentId] = useState<string | null>(null);
+  const [editingGarmentId, setEditingGarmentId] = useState<string | null>(null);
 
-  const selectedGarment = garments.find((g) => g.id === selectedId) ?? null;
-  const editingGarment = garments.find((g) => g.id === editingId) ?? null;
+  const selectedOutfit = outfits.find((outfit) => outfit.id === selectedId) ?? null;
+  const editingOutfit = outfits.find((outfit) => outfit.id === editingId) ?? null;
+  const openGarment = garments.find((garment) => garment.id === garmentId) ?? null;
+  const editingGarment = garments.find((garment) => garment.id === editingGarmentId) ?? null;
 
   const allTags = useMemo(
-    () => Array.from(new Set(garments.flatMap((g) => g.tags))).sort((a, b) => a.localeCompare(b)),
-    [garments],
+    () => Array.from(new Set(outfits.flatMap((o) => o.tags))).sort((a, b) => a.localeCompare(b)),
+    [outfits],
   );
 
-  const filteredGarments = useMemo(() => {
+  const filteredOutfits = useMemo(() => {
     const trimmedQuery = query.trim().toLowerCase();
-    return garments.filter((garment) => {
-      const matchesQuery = trimmedQuery.length === 0 || garment.name.toLowerCase().includes(trimmedQuery);
-      const matchesTags = selectedTags.every((tag) => garment.tags.includes(tag));
+    return outfits.filter((outfit) => {
+      const matchesQuery =
+        trimmedQuery.length === 0 || outfit.name.toLowerCase().includes(trimmedQuery);
+      const matchesTags = selectedTags.every((tag) => outfit.tags.includes(tag));
       return matchesQuery && matchesTags;
     });
-  }, [garments, query, selectedTags]);
+  }, [outfits, query, selectedTags]);
 
   function toggleTag(tag: string) {
     setSelectedTags((current) =>
@@ -69,34 +77,37 @@ export default function WardrobeScreen() {
   const cardWidth = (availableWidth - GRID_GAP * (numColumns - 1)) / numColumns;
 
   const hasFilters = query.trim().length > 0 || selectedTags.length > 0;
-  const isEmpty = !isLoading && garments.length === 0;
-  const noResults = !isLoading && garments.length > 0 && filteredGarments.length === 0;
+  const isEmpty = !isLoading && outfits.length === 0;
+  const noResults = !isLoading && outfits.length > 0 && filteredOutfits.length === 0;
 
   const titleBlock = (
     <View style={styles.titleRow}>
       <ThemedText type="title" style={[styles.title, isLandscape && styles.titleLandscape]}>
-        Mi armario
+        Outfits
       </ThemedText>
-      {garments.length > 0 && (
+      {outfits.length > 0 && (
         <View style={[styles.countBadge, { backgroundColor: theme.backgroundSelected }]}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            {garments.length}
+            {outfits.length}
           </ThemedText>
         </View>
       )}
 
       <View style={styles.titleSpacer} />
 
-      <OverflowMenu
-        items={[
-          {
-            label: 'Gestionar etiquetas',
-            icon: '🏷️',
-            testID: 'menu-manage-tags',
-            onPress: () => setIsManagingTags(true),
-          },
-        ]}
-      />
+      <Pressable
+        testID="outfits-new"
+        accessibilityRole="button"
+        accessibilityLabel="Nuevo outfit"
+        onPress={() => setIsCreating(true)}
+        hitSlop={10}
+        style={({ pressed }) => pressed && styles.pressed}>
+        <View style={styles.newButton}>
+          <ThemedText type="smallBold" style={styles.newButtonLabel}>
+            ＋ Nuevo
+          </ThemedText>
+        </View>
+      </Pressable>
     </View>
   );
 
@@ -111,7 +122,7 @@ export default function WardrobeScreen() {
         🔍
       </ThemedText>
       <TextInput
-        testID="wardrobe-search"
+        testID="outfits-search"
         value={query}
         onChangeText={setQuery}
         placeholder="Buscar por nombre…"
@@ -119,7 +130,7 @@ export default function WardrobeScreen() {
         style={[styles.searchInput, { color: theme.text }]}
       />
       {query.length > 0 && (
-        <Pressable testID="wardrobe-search-clear" onPress={() => setQuery('')} hitSlop={10}>
+        <Pressable testID="outfits-search-clear" onPress={() => setQuery('')} hitSlop={10}>
           <ThemedText themeColor="textSecondary">✕</ThemedText>
         </Pressable>
       )}
@@ -128,8 +139,7 @@ export default function WardrobeScreen() {
 
   const listHeader = (
     <View style={[styles.header, isLandscape && styles.headerLandscape]}>
-      {/* Landscape puts the title and search side by side to leave room for the grid. */}
-      {isLandscape && garments.length > 0 ? (
+      {isLandscape && outfits.length > 0 ? (
         <View style={styles.titleSearchRow}>
           {titleBlock}
           <View style={styles.searchFlex}>{searchBar}</View>
@@ -137,15 +147,15 @@ export default function WardrobeScreen() {
       ) : (
         <>
           {titleBlock}
-          {garments.length > 0 && searchBar}
+          {outfits.length > 0 && searchBar}
         </>
       )}
 
-      {garments.length > 0 && (
+      {outfits.length > 0 && (
         <>
           {allTags.length > 0 && (
             <TagFilter
-              testID="wardrobe-tag-filter"
+              testID="outfits-tag-filter"
               tags={allTags}
               selected={selectedTags}
               onToggle={toggleTag}
@@ -155,10 +165,10 @@ export default function WardrobeScreen() {
           {hasFilters && (
             <View style={styles.resultRow}>
               <ThemedText type="small" themeColor="textSecondary">
-                {filteredGarments.length}{' '}
-                {filteredGarments.length === 1 ? 'prenda encontrada' : 'prendas encontradas'}
+                {filteredOutfits.length}{' '}
+                {filteredOutfits.length === 1 ? 'outfit encontrado' : 'outfits encontrados'}
               </ThemedText>
-              <Pressable testID="wardrobe-clear-filters" onPress={clearFilters} hitSlop={10}>
+              <Pressable testID="outfits-clear-filters" onPress={clearFilters} hitSlop={10}>
                 <ThemedText type="smallBold" style={styles.clearLink}>
                   Limpiar filtros
                 </ThemedText>
@@ -172,12 +182,14 @@ export default function WardrobeScreen() {
         <ThemedView
           type="backgroundElement"
           style={[styles.emptyState, { borderColor: theme.border }]}>
-          <ThemedText style={styles.emptyIcon}>🧥</ThemedText>
+          <ThemedText style={styles.emptyIcon}>👗</ThemedText>
           <ThemedText type="smallBold" style={styles.emptyTitle}>
-            Todavía no hay prendas
+            Todavía no hay outfits
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" style={styles.emptyHint}>
-            Ve a la pestaña Añadir para subir tu primera prenda.
+            {garments.length === 0
+              ? 'Un outfit agrupa prendas que ya tienes. Añade alguna prenda para empezar.'
+              : 'Toca «＋ Nuevo» para combinar prendas de tu armario.'}
           </ThemedText>
         </ThemedView>
       )}
@@ -202,8 +214,8 @@ export default function WardrobeScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <FlatList
-          testID="wardrobe-list"
-          data={filteredGarments}
+          testID="outfits-list"
+          data={filteredOutfits}
           key={numColumns}
           keyExtractor={(item) => item.id}
           numColumns={numColumns}
@@ -212,8 +224,8 @@ export default function WardrobeScreen() {
           ListHeaderComponent={listHeader}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
-            <GarmentCard
-              garment={item}
+            <OutfitCard
+              outfit={item}
               width={cardWidth}
               imageAspectRatio={isLandscape ? 3 / 2 : 1}
               onPress={() => setSelectedId(item.id)}
@@ -221,22 +233,43 @@ export default function WardrobeScreen() {
           )}
         />
 
-        <GarmentDetailModal
-          garment={selectedGarment}
+        <OutfitDetailModal
+          outfit={selectedOutfit}
           onClose={() => setSelectedId(null)}
           onEdit={(id) => {
             setSelectedId(null);
             setEditingId(id);
           }}
           onDelete={(id) => {
-            removeGarment(id);
+            removeOutfit(id);
             setSelectedId(null);
+          }}
+          onOpenGarment={(id) => setGarmentId(id)}
+        />
+
+        <OutfitEditorModal
+          visible={isCreating || editingOutfit != null}
+          outfit={editingOutfit}
+          onClose={() => {
+            setIsCreating(false);
+            setEditingId(null);
           }}
         />
 
-        <GarmentEditModal garment={editingGarment} onClose={() => setEditingId(null)} />
+        <GarmentDetailModal
+          garment={openGarment}
+          onClose={() => setGarmentId(null)}
+          onEdit={(id) => {
+            setGarmentId(null);
+            setEditingGarmentId(id);
+          }}
+          onDelete={(id) => {
+            removeGarment(id);
+            setGarmentId(null);
+          }}
+        />
 
-        <TagsManagerModal visible={isManagingTags} onClose={() => setIsManagingTags(false)} />
+        <GarmentEditModal garment={editingGarment} onClose={() => setEditingGarmentId(null)} />
       </SafeAreaView>
     </ThemedView>
   );
@@ -300,6 +333,18 @@ const styles = StyleSheet.create({
     minWidth: 28,
     alignItems: 'center',
   },
+  pressed: {
+    opacity: 0.75,
+  },
+  newButton: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+    backgroundColor: Accent,
+  },
+  newButtonLabel: {
+    color: '#ffffff',
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -320,21 +365,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingVertical: Spacing.two,
   },
-  tagFilterGroups: {
-    gap: Spacing.three,
-  },
-  tagFilterGroup: {
-    gap: Spacing.one,
-  },
-  groupLabel: {
-    letterSpacing: 0.6,
-    fontSize: 11,
-  },
-  tagFilter: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -342,7 +372,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   clearLink: {
-    color: '#208AEF',
+    color: Accent,
   },
   emptyState: {
     alignItems: 'center',
