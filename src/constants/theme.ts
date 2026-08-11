@@ -9,22 +9,36 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#11181C',
+    background: '#F7F8FA',
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#ECEEF1',
+    textSecondary: '#697077',
+    border: '#E3E6EA',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#ECEDEE',
+    background: '#0B0C0E',
+    backgroundElement: '#17191C',
+    backgroundSelected: '#24272B',
+    textSecondary: '#9BA1A6',
+    border: '#2A2E33',
   },
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+
+export const Accent = '#208AEF';
+export const AccentSoft = 'rgba(32, 138, 239, 0.12)';
+export const Danger = '#E5484D';
+export const DangerSoft = 'rgba(229, 72, 77, 0.12)';
+
+export const Radius = {
+  small: 10,
+  medium: 14,
+  large: 20,
+  pill: 999,
+} as const;
 
 export const Fonts = Platform.select({
   ios: {
@@ -63,3 +77,16 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+export const CardShadow = Platform.select({
+  android: { elevation: 3 },
+  default: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+  },
+}) as object;
+
+/** Minimum card width used to decide how many grid columns fit. */
+export const MinCardWidth = 165;

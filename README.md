@@ -1,56 +1,192 @@
-# Welcome to your Expo app 👋
+# Armario
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile app for keeping track of the clothes in your wardrobe. Add each garment with a name, an
+optional photo and any tags you like, then find it later by searching its name or filtering by tag.
 
-## Get started
+Built with **React Native** and **Expo SDK 57**. Everything is stored on the device itself — no
+server, no account, no internet connection required.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. Start the app
+- **Add garments** with a name, a photo and tags. Only the name is required.
+- **Optional photo**, from the gallery or taken with the camera, with built-in cropping.
+- **Search by name**, case-insensitive.
+- **Filter by tags**, combinable: selecting several tags shows only the garments that carry **all**
+  of them.
+- **Edit** any saved garment (name, photo and tags).
+- **Delete** garments, with a confirmation prompt.
+- **Full device rotation** (portrait, landscape and upside-down portrait), with a grid that adapts
+  its column count to the available width.
+- **Light and dark mode**, following the system setting.
+- **Persistent local storage**: the garment list lives in AsyncStorage and photos are copied into
+  the app's private storage, so they survive even if you delete the original from your gallery.
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## Requirements
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- **Node.js** 20 or later
+- **npm** 10 or later
+- To build the native Android app:
+  - **JDK 17** (for example [Eclipse Temurin 17](https://adoptium.net/temurin/releases/?version=17))
+  - **Android SDK** (installed with [Android Studio](https://developer.android.com/studio))
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+> The JDK bundled with Android Studio may be too new (JDK 21+) and break the native build. If it
+> fails, point `JAVA_HOME` at a JDK 17 installation.
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## Getting started
 
 ```bash
-npm run reset-project
+git clone https://github.com/<your-username>/armario-app.git
+cd armario-app
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+With the dev server running you can open the app on:
 
-### Other setup steps
+| Target | How |
+| --- | --- |
+| Android emulator | press `a` in the terminal |
+| iOS simulator (macOS only) | press `i` |
+| Physical phone | scan the QR code with [Expo Go](https://expo.dev/go) |
+| Browser | press `w` |
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+> To use Expo Go on a physical phone, the phone and the computer must be on the same Wi-Fi network
+> and the router must not have client isolation (*AP isolation*) enabled. If it refuses to connect,
+> build an APK instead (see below) rather than fighting the network.
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+## Available scripts
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+| Script | What it does |
+| --- | --- |
+| `npm start` | Starts the Expo dev server |
+| `npm run android` | Builds and installs the app on an Android emulator or device |
+| `npm run ios` | Same for iOS (macOS only) |
+| `npm run web` | Starts the web build |
+| `npm test` | Runs the test suite |
+| `npm run test:watch` | Tests in interactive watch mode |
+| `npm run test:coverage` | Tests with a coverage report |
+| `npm run typecheck` | Type-checks the project with TypeScript |
+| `npm run lint` | Runs ESLint |
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## Tests
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+The project uses **Jest** with **React Native Testing Library**. These are regression tests: each
+block covers one feature, and several cases carry a `Regression:` comment because they document a
+real bug that was fixed and must not come back.
+
+```bash
+npm test
+```
+
+| File | What it covers |
+| --- | --- |
+| `wardrobe-screen.test.tsx` | Listing, name search, tag filtering and their combination, empty states |
+| `garment-form.test.tsx` | Form validation, optional photo, tag handling, camera/gallery permissions, reset after saving |
+| `wardrobe-context.test.tsx` | Adding, editing and deleting garments, persistence and image file management |
+| `edit-delete-flow.test.tsx` | Full flow: open detail → edit → save, and delete with confirmation |
+| `responsive-grid.test.tsx` | Column count and card width in portrait, landscape and on wide screens |
+
+> **On Selenium:** Selenium drives web browsers, so it does not apply to a native React Native app.
+> The equivalent here is React Native Testing Library for component and integration tests (what this
+> project uses) and, if on-device testing is needed later,
+> [Maestro](https://maestro.mobile.dev/) or [Detox](https://wix.github.io/Detox/) for end-to-end
+> tests.
+
+---
+
+## Building an installable APK
+
+Produces a standalone APK that runs without a computer or dev server:
+
+```bash
+npx expo prebuild --platform android
+cd android
+./gradlew assembleRelease
+```
+
+The APK is written to `android/app/build/outputs/apk/release/app-release.apk`.
+
+To install it on a phone: copy it to the device, open it from the file manager and allow
+installation from unknown sources when Android asks.
+
+> Use **`assembleRelease`**, not `assembleDebug`. The debug APK tries to reach the Metro dev server
+> on your computer at launch and shows a black screen without it; the release APK bundles the
+> JavaScript inside.
+>
+> By default the release APK is signed with the debug key, which is fine for testing but **not** for
+> publishing on Google Play. For that you need to generate your own keystore and configure
+> `signingConfigs` in `android/app/build.gradle`.
+
+### If the native build fails
+
+- **`ninja: error: manifest 'build.ninja' still dirty after 100 tries`** — stale CMake cache. Delete
+  the `.cxx` directories (`android/.cxx`, `node_modules/*/android/.cxx`) along with `android/build`
+  and `android/app/build`, then rebuild.
+- **Odd build errors inside a OneDrive- or Dropbox-synced folder** — move the project to a local
+  path (for example `C:\Projects\armario-app`). Sync clients interfere with the temporary files the
+  native build writes.
+- **`SDK location not found`** — create `android/local.properties` containing
+  `sdk.dir=C:/Users/<your-username>/AppData/Local/Android/Sdk`.
+
+---
+
+## Project structure
+
+```
+armario-app/
+├── src/
+│   ├── app/                    # Screens (expo-router, file-based routing)
+│   │   ├── _layout.tsx         # Root layout: theme and data provider
+│   │   ├── index.tsx           # "My wardrobe": list, search and filters
+│   │   └── add.tsx             # "Add": new garment form
+│   ├── components/             # Reusable components
+│   │   ├── garment-card.tsx    # Garment tile in the grid
+│   │   ├── garment-form.tsx    # Form shared by the add and edit flows
+│   │   ├── garment-detail-modal.tsx
+│   │   ├── garment-edit-modal.tsx
+│   │   ├── garment-image.tsx   # Image with a fallback when there is no photo
+│   │   ├── tag-chip.tsx
+│   │   └── button.tsx
+│   ├── context/
+│   │   └── wardrobe-context.tsx  # Global state and persistence
+│   ├── lib/
+│   │   └── persist-image.ts    # Copies photos into the app's storage
+│   ├── constants/theme.ts      # Colors, spacing, radii
+│   ├── hooks/
+│   ├── types/
+│   └── __tests__/              # Regression tests
+├── plugins/
+│   └── with-full-sensor-orientation.js   # Enables all four orientations on Android
+├── assets/images/              # App icons
+└── app.json                    # Expo configuration
+```
+
+### Design decisions
+
+- **Global state with React Context** rather than Redux or Zustand: the app has a single list of
+  garments and very few operations, so an extra dependency was not worth it.
+- **Images are copied into the app's private storage.** The URI returned by the image picker points
+  at a temporary cache that Android may clear; copying the file means the photo survives even if the
+  user deletes the original.
+- **A single form component** (`GarmentForm`) backs both the add and edit flows, parameterised by
+  props. This keeps the two screens from drifting apart as fields are added.
+- **`orientation: "default"` is not enough on Android** to allow upside-down portrait: it maps to
+  `screenOrientation="unspecified"`, which on most phones excludes the 180º rotation. The config
+  plugin changes it to `fullSensor`.
+
+---
+
+## License
+
+None. This is a personal project published without a license, which means all rights are reserved:
+the code can be read here, but it is not licensed for reuse, modification or redistribution.
