@@ -1,33 +1,30 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
 
-import { Accent, CardShadow, Radius, Spacing } from '@/constants/theme';
+import { Accent, CardShadow, Radius, Spacing, tagTint } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type OverflowMenuItem = {
   label: string;
   icon?: string;
   onPress: () => void;
-  /** Marks the item as the active choice, e.g. the theme currently in use. */
-  selected?: boolean;
+  /**
+   * Turns the row into a switch showing this value. Switch rows leave the menu
+   * open, so the change can be seen taking effect behind it.
+   */
+  switchValue?: boolean;
   testID?: string;
 };
 
-export type OverflowMenuGroup = {
-  /** Heading above the group. Omit for the first, unlabelled group. */
-  title?: string;
-  items: OverflowMenuItem[];
-};
-
 type OverflowMenuProps = {
-  groups: OverflowMenuGroup[];
+  items: OverflowMenuItem[];
   testID?: string;
 };
 
 /** "⋯" button that drops a small menu below itself, anchored to the top right. */
-export function OverflowMenu({ groups, testID = 'overflow-menu' }: OverflowMenuProps) {
+export function OverflowMenu({ items, testID = 'overflow-menu' }: OverflowMenuProps) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
 
@@ -63,29 +60,19 @@ export function OverflowMenu({ groups, testID = 'overflow-menu' }: OverflowMenuP
               CardShadow,
               { backgroundColor: theme.backgroundElement, borderColor: theme.border },
             ]}>
-            {groups.map((group, index) => (
-              <View key={group.title ?? `group-${index}`}>
-                {index > 0 && <View style={[styles.divider, { backgroundColor: theme.border }]} />}
+            {items.map((item, index) => {
+              const isSwitch = item.switchValue != null;
 
-                {group.title && (
-                  <ThemedText
-                    type="smallBold"
-                    themeColor="textSecondary"
-                    style={styles.groupTitle}>
-                    {group.title}
-                  </ThemedText>
-                )}
+              return (
+                <View key={item.label}>
+                  {index > 0 && <View style={[styles.divider, { backgroundColor: theme.border }]} />}
 
-                {group.items.map((item) => (
                   <Pressable
-                    key={item.label}
                     testID={item.testID}
-                    accessibilityRole="button"
-                    accessibilityState={
-                      item.selected == null ? undefined : { selected: item.selected }
-                    }
+                    accessibilityRole={isSwitch ? 'switch' : 'button'}
+                    accessibilityState={isSwitch ? { checked: item.switchValue } : undefined}
                     onPress={() => {
-                      setOpen(false);
+                      if (!isSwitch) setOpen(false);
                       item.onPress();
                     }}
                     style={({ pressed }) => [
@@ -96,15 +83,22 @@ export function OverflowMenu({ groups, testID = 'overflow-menu' }: OverflowMenuP
                     <ThemedText type="smallBold" style={styles.itemLabel}>
                       {item.label}
                     </ThemedText>
-                    {item.selected && (
-                      <ThemedText type="smallBold" style={styles.check}>
-                        ✓
-                      </ThemedText>
+
+                    {isSwitch && (
+                      // The row already handles the tap; the switch is only the
+                      // indicator, so it must not swallow the touch.
+                      <View pointerEvents="none">
+                        <Switch
+                          value={item.switchValue}
+                          trackColor={{ false: theme.backgroundSelected, true: tagTint(Accent, 0.5) }}
+                          thumbColor={item.switchValue ? Accent : theme.backgroundElement}
+                        />
+                      </View>
                     )}
                   </Pressable>
-                ))}
-              </View>
-            ))}
+                </View>
+              );
+            })}
           </View>
         </Pressable>
       </Modal>
@@ -146,13 +140,6 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginVertical: Spacing.one,
   },
-  groupTitle: {
-    letterSpacing: 0.6,
-    fontSize: 11,
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.one,
-    paddingBottom: Spacing.half,
-  },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -165,8 +152,5 @@ const styles = StyleSheet.create({
   },
   itemLabel: {
     flex: 1,
-  },
-  check: {
-    color: Accent,
   },
 });

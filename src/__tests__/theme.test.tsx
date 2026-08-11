@@ -38,7 +38,7 @@ async function openMenu() {
     </AppProviders>,
   );
   await fireEvent.press(await screen.findByTestId('overflow-menu-button'));
-  await screen.findByTestId('menu-theme-dark');
+  await screen.findByTestId('menu-dark-mode');
 }
 
 beforeEach(async () => {
@@ -135,47 +135,80 @@ describe('theme preference', () => {
   });
 });
 
-describe('theme options in the ⋯ menu', () => {
-  it('offers the three modes', async () => {
+describe('the dark mode switch in the ⋯ menu', () => {
+  it('sits next to the tag manager', async () => {
     await openMenu();
 
-    expect(screen.getByText('Seguir el sistema')).toBeOnTheScreen();
-    expect(screen.getByText('Modo claro')).toBeOnTheScreen();
     expect(screen.getByText('Modo oscuro')).toBeOnTheScreen();
-  });
-
-  it('marks the one in use', async () => {
-    await openMenu();
-
-    expect(screen.getByTestId('menu-theme-system')).toBeSelected();
-    expect(screen.getByTestId('menu-theme-dark')).not.toBeSelected();
-  });
-
-  it('keeps the tag manager reachable from the same menu', async () => {
-    await openMenu();
-
     expect(screen.getByTestId('menu-manage-tags')).toBeOnTheScreen();
   });
 
-  it('switches to dark mode and remembers it', async () => {
+  it('starts off when the device is in light mode', async () => {
     setSystemScheme('light');
     await openMenu();
 
-    await fireEvent.press(screen.getByTestId('menu-theme-dark'));
+    expect(screen.getByTestId('menu-dark-mode')).not.toBeChecked();
+  });
 
+  it('starts on when the device is already dark', async () => {
+    setSystemScheme('dark');
+    await openMenu();
+
+    expect(screen.getByTestId('menu-dark-mode')).toBeChecked();
+  });
+
+  it('turns dark mode on and remembers it', async () => {
+    setSystemScheme('light');
+    await openMenu();
+
+    await fireEvent.press(screen.getByTestId('menu-dark-mode'));
+
+    expect(screen.getByTestId('menu-dark-mode')).toBeChecked();
     await waitFor(async () => {
       expect(await AsyncStorage.getItem('wardrobe-theme')).toBe('dark');
     });
   });
 
-  it('shows dark mode as the active choice once chosen', async () => {
+  it('turns it off again', async () => {
+    setSystemScheme('light');
     await openMenu();
-    await fireEvent.press(screen.getByTestId('menu-theme-dark'));
 
-    await fireEvent.press(screen.getByTestId('overflow-menu-button'));
+    await fireEvent.press(screen.getByTestId('menu-dark-mode'));
+    await fireEvent.press(screen.getByTestId('menu-dark-mode'));
 
-    expect(await screen.findByTestId('menu-theme-dark')).toBeSelected();
-    expect(screen.getByTestId('menu-theme-system')).not.toBeSelected();
+    expect(screen.getByTestId('menu-dark-mode')).not.toBeChecked();
+    await waitFor(async () => {
+      expect(await AsyncStorage.getItem('wardrobe-theme')).toBe('light');
+    });
+  });
+
+  it('Regression: turning it off on a dark device pins light mode', async () => {
+    setSystemScheme('dark');
+    await openMenu();
+
+    await fireEvent.press(screen.getByTestId('menu-dark-mode'));
+
+    expect(screen.getByTestId('menu-dark-mode')).not.toBeChecked();
+    await waitFor(async () => {
+      expect(await AsyncStorage.getItem('wardrobe-theme')).toBe('light');
+    });
+  });
+
+  it('stays open so the change can be seen happening', async () => {
+    await openMenu();
+
+    await fireEvent.press(screen.getByTestId('menu-dark-mode'));
+
+    expect(screen.getByTestId('menu-dark-mode')).toBeOnTheScreen();
+  });
+
+  it('closes the menu for the tag manager, which is not a switch', async () => {
+    await openMenu();
+
+    await fireEvent.press(screen.getByTestId('menu-manage-tags'));
+
+    await waitFor(() => expect(screen.queryByTestId('menu-dark-mode')).not.toBeOnTheScreen());
+    expect(screen.getByTestId('tags-manager')).toBeOnTheScreen();
   });
 
   it('repaints the screen with the dark palette', async () => {
@@ -183,7 +216,7 @@ describe('theme options in the ⋯ menu', () => {
     await openMenu();
     expect(screen.getByText('Mi armario')).toHaveStyle({ color: Colors.light.text });
 
-    await fireEvent.press(screen.getByTestId('menu-theme-dark'));
+    await fireEvent.press(screen.getByTestId('menu-dark-mode'));
 
     await waitFor(() =>
       expect(screen.getByText('Mi armario')).toHaveStyle({ color: Colors.dark.text }),

@@ -5,20 +5,20 @@ import { useSystemColorScheme } from '@/hooks/use-color-scheme';
 
 const STORAGE_KEY = 'wardrobe-theme';
 
-/** `system` follows the device setting; the other two override it. */
+/**
+ * `system` follows the device setting and is what a fresh install uses. The
+ * other two are what the dark mode switch writes once it is touched.
+ */
 export type ThemePreference = 'system' | 'light' | 'dark';
-
-export const ThemePreferences: { value: ThemePreference; label: string; icon: string }[] = [
-  { value: 'system', label: 'Seguir el sistema', icon: '⚙️' },
-  { value: 'light', label: 'Modo claro', icon: '☀️' },
-  { value: 'dark', label: 'Modo oscuro', icon: '🌙' },
-];
 
 type ThemeContextValue = {
   preference: ThemePreference;
   setPreference: (preference: ThemePreference) => void;
   /** The scheme actually in use, once the preference is applied. */
   scheme: 'light' | 'dark';
+  isDark: boolean;
+  /** Flips between light and dark, pinning the choice from then on. */
+  toggleDark: () => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -45,14 +45,20 @@ export function ThemePreferenceProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEY, preference);
   }, [preference, isLoading]);
 
-  const value = useMemo<ThemeContextValue>(
-    () => ({
+  const value = useMemo<ThemeContextValue>(() => {
+    const scheme =
+      preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
+
+    return {
       preference,
       setPreference: setPreferenceState,
-      scheme: preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference,
-    }),
-    [preference, systemScheme],
-  );
+      scheme,
+      isDark: scheme === 'dark',
+      // Toggling from `system` pins whichever scheme is not showing right now,
+      // so the switch always does what its position says.
+      toggleDark: () => setPreferenceState(scheme === 'dark' ? 'light' : 'dark'),
+    };
+  }, [preference, systemScheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

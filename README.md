@@ -34,8 +34,8 @@ server, no account, no internet connection required.
   garments untouched; deleting a garment removes it from the outfits that were wearing it.
 - **Full device rotation** (portrait, landscape and upside-down portrait), with a grid that adapts
   its column count to the available width.
-- **Light and dark mode**: follows the system by default, and the **⋯ menu** can force either one.
-  The choice is remembered between launches.
+- **Light and dark mode**: follows the system setting until you touch the **dark mode switch** in
+  the ⋯ menu, from which point your choice is pinned and remembered between launches.
 - **Persistent local storage**: the garment list lives in AsyncStorage and photos are copied into
   the app's private storage, so they survive even if you delete the original from your gallery.
 
@@ -115,7 +115,7 @@ npm test
 | `responsive-grid.test.tsx` | Column count and card width in portrait, landscape and on wide screens |
 | `tags.test.tsx` | Tag catalogue, colours, groups, auto-registration, the ⋯ menu, the tag manager and the grouped filter |
 | `images-description.test.tsx` | Several photos per garment, the gallery, the description field, tag autocomplete and the storage migration |
-| `theme.test.tsx` | The light/dark preference, its persistence, and the appearance options in the ⋯ menu |
+| `theme.test.tsx` | The light/dark preference, its persistence, and the dark mode switch in the ⋯ menu |
 | `outfits.test.tsx` | Outfit storage, no repeated garment within an outfit, one garment across many outfits, the outfits screen with its search and filter, and the create/edit/delete flows |
 
 > **On Selenium:** Selenium drives web browsers, so it does not apply to a native React Native app.
@@ -281,6 +281,10 @@ armario-app/
 - **The colour scheme goes through the app's own context**, not React Native's `useColorScheme`
   directly, so a stored preference can override the device setting. The hook falls back to the
   system value when no provider is mounted, which keeps a screen renderable on its own.
+- **The stored preference has three states but the UI has two.** It starts at `system`, so an
+  untouched install keeps following the device; flipping the switch writes `light` or `dark` and
+  pins it. The switch itself only ever shows the scheme currently on screen, so its position never
+  lies about what you are looking at.
 - **The tab bar sets `tintColor` as well as `indicatorColor`.** The indicator is a pill drawn behind
   the selected icon; leaving it the same colour as the bar made that icon invisible.
 
