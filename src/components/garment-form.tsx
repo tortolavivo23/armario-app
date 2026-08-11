@@ -18,11 +18,17 @@ import { TagChip } from './tag-chip';
 import { ThemedText } from './themed-text';
 
 import { Accent, BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { useWardrobe } from '@/context/wardrobe-context';
 import { useTheme } from '@/hooks/use-theme';
+
+/** How many autocomplete suggestions fit without pushing the form around. */
+const MAX_SUGGESTIONS = 8;
 
 export type GarmentFormValues = {
   name: string;
-  imageUri: string | null;
+  /** In display order; the first one becomes the cover in the grid. */
+  imageUris: string[];
+  description: string;
   tags: string[];
 };
 
@@ -38,7 +44,7 @@ type GarmentFormProps = {
   onSubmit: (values: GarmentFormValues) => Promise<void>;
 };
 
-const EMPTY_VALUES: GarmentFormValues = { name: '', imageUri: null, tags: [] };
+const EMPTY_VALUES: GarmentFormValues = { name: '', imageUris: [], description: '', tags: [] };
 
 export function GarmentForm({
   title,
@@ -51,11 +57,13 @@ export function GarmentForm({
   onSubmit,
 }: GarmentFormProps) {
   const theme = useTheme();
+  const { tags: catalogue, getTag } = useWardrobe();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
   const [name, setName] = useState(initialValues?.name ?? '');
-  const [imageUri, setImageUri] = useState<string | null>(initialValues?.imageUri ?? null);
+  const [imageUris, setImageUris] = useState<string[]>(initialValues?.imageUris ?? []);
+  const [description, setDescription] = useState(initialValues?.description ?? '');
   const [tags, setTags] = useState<string[]>(initialValues?.tags ?? []);
   const [tagInput, setTagInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -80,21 +88,53 @@ export function GarmentForm({
 
     const result =
       source === 'library'
-        ? await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.8 })
+        ? await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsMultipleSelection: true,
+            quality: 0.8,
+          })
         : await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const picked = result.assets.map((asset) => asset.uri);
+      setImageUris((current) => [...current, ...picked.filter((uri) => !current.includes(uri))]);
     }
   }
 
-  function addTag() {
-    const cleaned = tagInput.trim().toLowerCase();
+  function removeImage(uri: string) {
+    setImageUris((current) => current.filter((item) => item !== uri));
+  }
+
+  /** Promotes a photo to the front, which is the cover shown in the grid. */
+  function makeCover(uri: string) {
+    setImageUris((current) => [uri, ...current.filter((item) => item !== uri)]);
+  }
+
+  function addTag(value: string = tagInput) {
+    const cleaned = value.trim().toLowerCase();
     if (cleaned.length > 0 && !tags.includes(cleaned)) {
       setTags((current) => [...current, cleaned]);
     }
     setTagInput('');
   }
+
+  // Existing tags matching what has been typed, so a long name can be picked
+  // after a letter or two instead of being retyped.
+  const suggestions = (() => {
+    const typed = tagInput.trim().toLowerCase();
+    if (typed.length === 0) return [];
+
+    return catalogue
+      .map((tag) => tag.name)
+      .filter((name) => !tags.includes(name) && name.includes(typed))
+      // Prefix matches first: typing "pan" should surface "pantalón" above "chándal panadero".
+      .sort((a, b) => {
+        const aPrefix = a.startsWith(typed) ? 0 : 1;
+        const bPrefix = b.startsWith(typed) ? 0 : 1;
+        return aPrefix - bPrefix || a.localeCompare(b);
+      })
+      .slice(0, MAX_SUGGESTIONS);
+  })();
 
   function removeTag(tag: string) {
     setTags((current) => current.filter((t) => t !== tag));
@@ -104,10 +144,11 @@ export function GarmentForm({
     if (!canSave) return;
     setIsSaving(true);
     try {
-      await onSubmit({ name: name.trim(), imageUri, tags });
+      await onSubmit({ name: name.trim(), imageUris, description: description.trim(), tags });
       if (resetOnSubmit) {
         setName(EMPTY_VALUES.name);
-        setImageUri(EMPTY_VALUES.imageUri);
+        setImageUris(EMPTY_VALUES.imageUris);
+        setDescription(EMPTY_VALUES.description);
         setTags(EMPTY_VALUES.tags);
         setTagInput('');
       }
@@ -118,19 +159,21 @@ export function GarmentForm({
     }
   }
 
+  const [cover, ...extraImages] = imageUris;
+
   const imageSection = (
     <View style={styles.section}>
       <Pressable
         testID="garment-form-image"
         onPress={() => pickImage('library')}
         style={({ pressed }) => pressed && styles.pressed}>
-        {imageUri ? (
-          <GarmentImage uri={imageUri} style={styles.imagePreview} />
+        {cover ? (
+          <GarmentImage uri={cover} style={styles.imagePreview} />
         ) : (
           <View style={[styles.imageEmpty, { borderColor: theme.border }]}>
             <ThemedText style={styles.imageEmptyIcon}>👕</ThemedText>
             <ThemedText type="smallBold" themeColor="textSecondary">
-              Toca para añadir una foto
+              Toca para añadir fotos
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               Opcional
@@ -138,6 +181,53 @@ export function GarmentForm({
           </View>
         )}
       </Pressable>
+
+      {imageUris.length > 0 && (
+        <>
+          <ThemedText type="small" themeColor="textSecondary">
+            {imageUris.length === 1
+              ? '1 foto'
+              : `${imageUris.length} fotos · la primera es la portada`}
+          </ThemedText>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.thumbnails}>
+            {imageUris.map((uri, index) => (
+              <View key={uri} testID={`garment-form-thumb-${index}`} style={styles.thumbnail}>
+                <Pressable onPress={() => makeCover(uri)}>
+                  <GarmentImage uri={uri} style={styles.thumbnailImage} placeholderSize={20} />
+                </Pressable>
+
+                {index === 0 && (
+                  <View style={styles.coverBadge}>
+                    <ThemedText type="small" style={styles.coverBadgeLabel}>
+                      Portada
+                    </ThemedText>
+                  </View>
+                )}
+
+                <Pressable
+                  testID={`garment-form-remove-image-${index}`}
+                  onPress={() => removeImage(uri)}
+                  hitSlop={8}
+                  style={styles.thumbnailRemove}>
+                  <ThemedText type="smallBold" style={styles.thumbnailRemoveLabel}>
+                    ✕
+                  </ThemedText>
+                </Pressable>
+              </View>
+            ))}
+          </ScrollView>
+
+          {extraImages.length > 0 && (
+            <ThemedText type="small" themeColor="textSecondary">
+              Toca una foto para usarla como portada.
+            </ThemedText>
+          )}
+        </>
+      )}
 
       <View style={styles.imageButtons}>
         <Button
@@ -152,11 +242,11 @@ export function GarmentForm({
           onPress={() => pickImage('camera')}
           style={styles.imageButton}
         />
-        {imageUri && (
+        {imageUris.length > 0 && (
           <Button
-            label="Quitar"
+            label="Quitar todas"
             variant="secondary"
-            onPress={() => setImageUri(null)}
+            onPress={() => setImageUris([])}
             style={styles.imageButton}
           />
         )}
@@ -185,6 +275,27 @@ export function GarmentForm({
 
       <View style={styles.section}>
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.label}>
+          DESCRIPCIÓN
+        </ThemedText>
+        <TextInput
+          testID="garment-form-description"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Notas sobre la prenda: talla, tejido, dónde la compraste…"
+          placeholderTextColor={theme.textSecondary}
+          multiline
+          numberOfLines={5}
+          textAlignVertical="top"
+          style={[
+            styles.input,
+            styles.textArea,
+            { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border },
+          ]}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.label}>
           ETIQUETAS
         </ThemedText>
         <View style={styles.tagInputRow}>
@@ -192,7 +303,9 @@ export function GarmentForm({
             testID="garment-form-tag-input"
             value={tagInput}
             onChangeText={setTagInput}
-            onSubmitEditing={addTag}
+            onSubmitEditing={() => addTag()}
+            autoCapitalize="none"
+            autoCorrect={false}
             placeholder="Ej. verano, casual"
             placeholderTextColor={theme.textSecondary}
             returnKeyType="done"
@@ -205,15 +318,40 @@ export function GarmentForm({
           <Button
             label="Añadir"
             variant="secondary"
-            onPress={addTag}
+            onPress={() => addTag()}
             disabled={tagInput.trim().length === 0}
           />
         </View>
 
+        {suggestions.length > 0 && (
+          <View testID="garment-form-tag-suggestions" style={styles.suggestions}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Sugerencias
+            </ThemedText>
+            <View style={styles.tags}>
+              {suggestions.map((suggestion) => (
+                <TagChip
+                  key={suggestion}
+                  testID={`garment-form-suggestion-${suggestion}`}
+                  label={suggestion}
+                  color={getTag(suggestion).color}
+                  onPress={() => addTag(suggestion)}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
         {tags.length > 0 && (
           <View style={styles.tags}>
             {tags.map((tag) => (
-              <TagChip key={tag} label={tag} onRemove={() => removeTag(tag)} />
+              <TagChip
+                key={tag}
+                testID={`garment-form-tag-${tag}`}
+                label={tag}
+                color={getTag(tag).color}
+                onRemove={() => removeTag(tag)}
+              />
             ))}
           </View>
         )}
@@ -344,6 +482,53 @@ const styles = StyleSheet.create({
     fontSize: 52,
     marginBottom: Spacing.one,
   },
+  thumbnails: {
+    gap: Spacing.two,
+    paddingVertical: Spacing.half,
+  },
+  thumbnail: {
+    width: 76,
+    height: 76,
+  },
+  thumbnailImage: {
+    width: 76,
+    height: 76,
+    borderRadius: Radius.small,
+  },
+  coverBadge: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingVertical: 1,
+    borderBottomLeftRadius: Radius.small,
+    borderBottomRightRadius: Radius.small,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  coverBadgeLabel: {
+    color: '#ffffff',
+    fontSize: 11,
+  },
+  thumbnailRemove: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 24,
+    height: 24,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  thumbnailRemoveLabel: {
+    color: '#ffffff',
+    fontSize: 12,
+  },
+  textArea: {
+    minHeight: 120,
+    paddingTop: Spacing.three - 2,
+  },
   imageButtons: {
     flexDirection: 'row',
     gap: Spacing.two,
@@ -371,6 +556,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  suggestions: {
+    gap: Spacing.half,
     marginTop: Spacing.one,
   },
   submit: {

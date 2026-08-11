@@ -1,7 +1,8 @@
 # Armario
 
-A mobile app for keeping track of the clothes in your wardrobe. Add each garment with a name, an
-optional photo and any tags you like, then find it later by searching its name or filtering by tag.
+A mobile app for keeping track of the clothes in your wardrobe. Add each garment with a name, as
+many photos as you like, a description and colour-coded tags, then find it later by searching its
+name or filtering by tag.
 
 Built with **React Native** and **Expo SDK 57**. Everything is stored on the device itself — no
 server, no account, no internet connection required.
@@ -10,12 +11,20 @@ server, no account, no internet connection required.
 
 ## Features
 
-- **Add garments** with a name, a photo and tags. Only the name is required.
-- **Optional photo**, from the gallery or taken with the camera, with built-in cropping.
+- **Add garments** with a name, photos, a description and tags. Only the name is required.
+- **Several photos per garment**, from the gallery (multi-select) or the camera. The grid shows the
+  cover; the detail view opens a swipeable gallery. Any photo can be promoted to cover.
+- **Optional description**, a free-form notes field shown only on the detail screen.
 - **Search by name**, case-insensitive.
+- **Tags with colours and groups.** Every tag can be given a colour and filed under a group of your
+  own naming — "estación", "tipo", "ocasión" — and the filter row lays the chips out group by group.
+  The manager lives behind the **⋯ menu** at the top right, since it is set up once in a while
+  rather than every day.
+- **Tag autocomplete**: typing a letter or two suggests the tags already in use, so long names never
+  have to be retyped.
 - **Filter by tags**, combinable: selecting several tags shows only the garments that carry **all**
   of them.
-- **Edit** any saved garment (name, photo and tags).
+- **Edit** any saved garment (name, photos, description and tags).
 - **Delete** garments, with a confirmation prompt.
 - **Full device rotation** (portrait, landscape and upside-down portrait), with a grid that adapts
   its column count to the available width.
@@ -95,6 +104,8 @@ npm test
 | `wardrobe-context.test.tsx` | Adding, editing and deleting garments, persistence and image file management |
 | `edit-delete-flow.test.tsx` | Full flow: open detail → edit → save, and delete with confirmation |
 | `responsive-grid.test.tsx` | Column count and card width in portrait, landscape and on wide screens |
+| `tags.test.tsx` | Tag catalogue, colours, groups, auto-registration, the ⋯ menu, the tag manager and the grouped filter |
+| `images-description.test.tsx` | Several photos per garment, the gallery, the description field, tag autocomplete and the storage migration |
 
 > **On Selenium:** Selenium drives web browsers, so it does not apply to a native React Native app.
 > The equivalent here is React Native Testing Library for component and integration tests (what this
@@ -132,7 +143,7 @@ commits since the previous release.
 still build and upload the artifact, but reuse the existing release rather than
 overwriting it.
 
-Versions carrying a semver pre-release identifier — the current `0.1.0-alpha.1`,
+Versions carrying a semver pre-release identifier — the current `0.1.0-alpha.2`,
 for instance — are published as GitHub pre-releases, so they are not offered as
 the latest stable download. Dropping the suffix (`0.1.0`) publishes a normal
 release.
@@ -189,23 +200,28 @@ armario-app/
 ├── src/
 │   ├── app/                    # Screens (expo-router, file-based routing)
 │   │   ├── _layout.tsx         # Root layout: theme and data provider
-│   │   ├── index.tsx           # "My wardrobe": list, search and filters
-│   │   └── add.tsx             # "Add": new garment form
+│   │   ├── index.tsx           # "My wardrobe": list, search and grouped filters
+│   │   ├── add.tsx             # "Add": new garment form
+│   │   └── tags.tsx            # "Tags": colours and groups for every tag
 │   ├── components/             # Reusable components
 │   │   ├── garment-card.tsx    # Garment tile in the grid
 │   │   ├── garment-form.tsx    # Form shared by the add and edit flows
+│   │   ├── garment-gallery.tsx # Swipeable photo gallery for the detail view
 │   │   ├── garment-detail-modal.tsx
 │   │   ├── garment-edit-modal.tsx
 │   │   ├── garment-image.tsx   # Image with a fallback when there is no photo
+│   │   ├── tags-manager-modal.tsx  # Tag list behind the ⋯ menu
+│   │   ├── tag-editor-modal.tsx  # Colour and group picker for one tag
+│   │   ├── overflow-menu.tsx   # "⋯" dropdown in the wardrobe header
 │   │   ├── tag-chip.tsx
 │   │   └── button.tsx
 │   ├── context/
 │   │   └── wardrobe-context.tsx  # Global state and persistence
 │   ├── lib/
 │   │   └── persist-image.ts    # Copies photos into the app's storage
-│   ├── constants/theme.ts      # Colors, spacing, radii
+│   ├── constants/theme.ts      # Colors, spacing, radii, tag palette
 │   ├── hooks/
-│   ├── types/
+│   ├── types/                  # Garment and Tag shapes, plus the storage migration
 │   └── __tests__/              # Regression tests
 ├── plugins/
 │   └── with-full-sensor-orientation.js   # Enables all four orientations on Android
@@ -225,6 +241,15 @@ armario-app/
 - **`orientation: "default"` is not enough on Android** to allow upside-down portrait: it maps to
   `screenOrientation="unspecified"`, which on most phones excludes the 180º rotation. The config
   plugin changes it to `fullSensor`.
+- **Tags are identified by their lowercase name**, and `Garment.tags` keeps storing plain strings.
+  Colours and groups live in a separate catalogue keyed by that name, so garments saved before the
+  catalogue existed keep working and no data migration was needed for it. A tag typed into a garment
+  form registers itself automatically with a colour from the palette.
+- **Tag colours come from a fixed palette** rather than a free colour picker, which keeps the
+  wardrobe visually coherent and guarantees every colour stays legible in both themes.
+- **Stored garments are migrated on load** by `migrateGarment`, which turns the old single
+  `imageUri` into an `imageUris` list and fills in a missing `description`. The migration runs in
+  the provider, so the rest of the app only ever sees the current shape.
 
 ---
 

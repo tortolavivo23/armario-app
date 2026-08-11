@@ -2,12 +2,13 @@ import { Alert, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, V
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from './button';
-import { GarmentImage } from './garment-image';
+import { GarmentGallery } from './garment-gallery';
 import { TagChip } from './tag-chip';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { Radius, Spacing } from '@/constants/theme';
+import { useWardrobe } from '@/context/wardrobe-context';
 import { useTheme } from '@/hooks/use-theme';
 import { Garment } from '@/types/garment';
 
@@ -28,6 +29,7 @@ function formatDate(timestamp: number) {
 
 export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: GarmentDetailModalProps) {
   const theme = useTheme();
+  const { getTag } = useWardrobe();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
@@ -45,10 +47,10 @@ export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: Garme
           {garment && (
             <View style={[styles.body, isLandscape && styles.bodyLandscape]}>
               <View style={isLandscape ? styles.imageWrapperLandscape : undefined}>
-                <GarmentImage
-                  uri={garment.imageUri}
-                  placeholderSize={80}
-                  style={isLandscape ? styles.imageLandscape : styles.image}
+                <GarmentGallery
+                  uris={garment.imageUris}
+                  width={isLandscape ? width / 2 : width}
+                  height={isLandscape ? height : width}
                 />
 
                 <Pressable
@@ -74,6 +76,19 @@ export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: Garme
                     Añadida el {formatDate(garment.createdAt)}
                   </ThemedText>
 
+                  {garment.description.length > 0 && (
+                    <>
+                      <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+                      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.label}>
+                        DESCRIPCIÓN
+                      </ThemedText>
+                      <ThemedText testID="garment-detail-description" style={styles.description}>
+                        {garment.description}
+                      </ThemedText>
+                    </>
+                  )}
+
                   <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
                   <ThemedText type="smallBold" themeColor="textSecondary" style={styles.label}>
@@ -83,7 +98,7 @@ export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: Garme
                   {garment.tags.length > 0 ? (
                     <View style={styles.tags}>
                       {garment.tags.map((tag) => (
-                        <TagChip key={tag} label={tag} />
+                        <TagChip key={tag} label={tag} color={getTag(tag).color} />
                       ))}
                     </View>
                   ) : (
@@ -175,6 +190,9 @@ const styles = StyleSheet.create({
   label: {
     letterSpacing: 0.6,
     fontSize: 12,
+  },
+  description: {
+    lineHeight: 24,
   },
   tags: {
     flexDirection: 'row',

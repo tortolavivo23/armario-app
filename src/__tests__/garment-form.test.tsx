@@ -2,18 +2,21 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import * as ImagePicker from 'expo-image-picker';
 
 import { GarmentForm, type GarmentFormValues } from '@/components/garment-form';
+import { WardrobeProvider } from '@/context/wardrobe-context';
 
 async function renderForm(overrides: Partial<React.ComponentProps<typeof GarmentForm>> = {}) {
   const onSubmit = jest.fn<Promise<void>, [GarmentFormValues]>().mockResolvedValue(undefined);
 
   await render(
-    <GarmentForm
-      title="Nueva prenda"
-      submitLabel="Guardar prenda"
-      savingLabel="Guardando…"
-      onSubmit={onSubmit}
-      {...overrides}
-    />,
+    <WardrobeProvider>
+      <GarmentForm
+        title="Nueva prenda"
+        submitLabel="Guardar prenda"
+        savingLabel="Guardando…"
+        onSubmit={onSubmit}
+        {...overrides}
+      />
+    </WardrobeProvider>,
   );
 
   return { onSubmit };
@@ -32,7 +35,12 @@ describe('GarmentForm validation', () => {
     await fireEvent.press(screen.getByTestId('garment-form-submit'));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit).toHaveBeenCalledWith({ name: 'Bufanda', imageUri: null, tags: [] });
+    expect(onSubmit).toHaveBeenCalledWith({
+      name: 'Bufanda',
+      imageUris: [],
+      description: '',
+      tags: [],
+    });
   });
 
   it('does not submit while the name is empty', async () => {
@@ -131,7 +139,7 @@ describe('GarmentForm image picking', () => {
     await fireEvent.press(screen.getByTestId('garment-form-submit'));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit.mock.calls[0][0].imageUri).toBe('file:///picked/photo.jpg');
+    expect(onSubmit.mock.calls[0][0].imageUris).toEqual(['file:///picked/photo.jpg']);
   });
 
   it('keeps the image empty when the user cancels the picker', async () => {
@@ -147,7 +155,7 @@ describe('GarmentForm image picking', () => {
     await fireEvent.press(screen.getByTestId('garment-form-submit'));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit.mock.calls[0][0].imageUri).toBeNull();
+    expect(onSubmit.mock.calls[0][0].imageUris).toEqual([]);
   });
 
   it('does not pick an image when the permission is denied', async () => {
@@ -164,7 +172,7 @@ describe('GarmentForm image picking', () => {
 
     await fireEvent.press(screen.getByTestId('garment-form-submit'));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit.mock.calls[0][0].imageUri).toBeNull();
+    expect(onSubmit.mock.calls[0][0].imageUris).toEqual([]);
   });
 });
 
@@ -172,7 +180,12 @@ describe('GarmentForm editing mode', () => {
   it('pre-fills the fields from initialValues', async () => {
     await renderForm({
       title: 'Editar prenda',
-      initialValues: { name: 'Camisa vaquera', imageUri: 'file:///a.jpg', tags: ['casual'] },
+      initialValues: {
+        name: 'Camisa vaquera',
+        imageUris: ['file:///a.jpg'],
+        description: '',
+        tags: ['casual'],
+      },
     });
 
     expect(screen.getByTestId('garment-form-name').props.value).toBe('Camisa vaquera');
@@ -182,7 +195,12 @@ describe('GarmentForm editing mode', () => {
   it('submits the edited values', async () => {
     const { onSubmit } = await renderForm({
       title: 'Editar prenda',
-      initialValues: { name: 'Camisa vaquera', imageUri: 'file:///a.jpg', tags: ['casual'] },
+      initialValues: {
+        name: 'Camisa vaquera',
+        imageUris: ['file:///a.jpg'],
+        description: '',
+        tags: ['casual'],
+      },
     });
 
     await fireEvent.changeText(screen.getByTestId('garment-form-name'), 'Camisa nueva');
@@ -191,7 +209,8 @@ describe('GarmentForm editing mode', () => {
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit).toHaveBeenCalledWith({
       name: 'Camisa nueva',
-      imageUri: 'file:///a.jpg',
+      imageUris: ['file:///a.jpg'],
+      description: '',
       tags: ['casual'],
     });
   });
