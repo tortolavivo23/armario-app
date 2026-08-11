@@ -1,4 +1,3 @@
-import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import {
   Alert,
@@ -13,7 +12,7 @@ import {
 } from 'react-native';
 
 import { Button } from './button';
-import { GarmentImage } from './garment-image';
+import { GarmentImagesField } from './garment-images-field';
 import { TagPicker } from './tag-picker';
 import { WardrobePicker } from './wardrobe-picker';
 import { ThemedText } from './themed-text';
@@ -75,46 +74,6 @@ export function GarmentForm({
 
   const canSave = name.trim().length > 0 && !isSaving;
 
-  async function pickImage(source: 'library' | 'camera') {
-    const permission =
-      source === 'library'
-        ? await ImagePicker.requestMediaLibraryPermissionsAsync()
-        : await ImagePicker.requestCameraPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert(
-        'Permiso necesario',
-        source === 'library'
-          ? 'Necesitamos acceso a tus fotos para elegir una imagen.'
-          : 'Necesitamos acceso a la cámara para hacer una foto.',
-      );
-      return;
-    }
-
-    const result =
-      source === 'library'
-        ? await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsMultipleSelection: true,
-            quality: 0.8,
-          })
-        : await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
-
-    if (!result.canceled) {
-      const picked = result.assets.map((asset) => asset.uri);
-      setImageUris((current) => [...current, ...picked.filter((uri) => !current.includes(uri))]);
-    }
-  }
-
-  function removeImage(uri: string) {
-    setImageUris((current) => current.filter((item) => item !== uri));
-  }
-
-  /** Promotes a photo to the front, which is the cover shown in the grid. */
-  function makeCover(uri: string) {
-    setImageUris((current) => [uri, ...current.filter((item) => item !== uri)]);
-  }
-
   async function handleSave() {
     if (!canSave) return;
     setIsSaving(true);
@@ -141,99 +100,8 @@ export function GarmentForm({
     }
   }
 
-  const [cover, ...extraImages] = imageUris;
-
   const imageSection = (
-    <View style={styles.section}>
-      <Pressable
-        testID="garment-form-image"
-        onPress={() => pickImage('library')}
-        style={({ pressed }) => pressed && styles.pressed}>
-        {cover ? (
-          <GarmentImage uri={cover} style={styles.imagePreview} />
-        ) : (
-          <View style={[styles.imageEmpty, { borderColor: theme.border }]}>
-            <ThemedText style={styles.imageEmptyIcon}>👕</ThemedText>
-            <ThemedText type="smallBold" themeColor="textSecondary">
-              Toca para añadir fotos
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Opcional
-            </ThemedText>
-          </View>
-        )}
-      </Pressable>
-
-      {imageUris.length > 0 && (
-        <>
-          <ThemedText type="small" themeColor="textSecondary">
-            {imageUris.length === 1
-              ? '1 foto'
-              : `${imageUris.length} fotos · la primera es la portada`}
-          </ThemedText>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.thumbnails}>
-            {imageUris.map((uri, index) => (
-              <View key={uri} testID={`garment-form-thumb-${index}`} style={styles.thumbnail}>
-                <Pressable onPress={() => makeCover(uri)}>
-                  <GarmentImage uri={uri} style={styles.thumbnailImage} placeholderSize={20} />
-                </Pressable>
-
-                {index === 0 && (
-                  <View style={styles.coverBadge}>
-                    <ThemedText type="small" style={styles.coverBadgeLabel}>
-                      Portada
-                    </ThemedText>
-                  </View>
-                )}
-
-                <Pressable
-                  testID={`garment-form-remove-image-${index}`}
-                  onPress={() => removeImage(uri)}
-                  hitSlop={8}
-                  style={styles.thumbnailRemove}>
-                  <ThemedText type="smallBold" style={styles.thumbnailRemoveLabel}>
-                    ✕
-                  </ThemedText>
-                </Pressable>
-              </View>
-            ))}
-          </ScrollView>
-
-          {extraImages.length > 0 && (
-            <ThemedText type="small" themeColor="textSecondary">
-              Toca una foto para usarla como portada.
-            </ThemedText>
-          )}
-        </>
-      )}
-
-      <View style={styles.imageButtons}>
-        <Button
-          label="Galería"
-          variant="secondary"
-          onPress={() => pickImage('library')}
-          style={styles.imageButton}
-        />
-        <Button
-          label="Cámara"
-          variant="secondary"
-          onPress={() => pickImage('camera')}
-          style={styles.imageButton}
-        />
-        {imageUris.length > 0 && (
-          <Button
-            label="Quitar todas"
-            variant="secondary"
-            onPress={() => setImageUris([])}
-            style={styles.imageButton}
-          />
-        )}
-      </View>
-    </View>
+    <GarmentImagesField value={imageUris} onChange={setImageUris} testIDPrefix="garment-form" />
   );
 
   const fieldsSection = (
@@ -391,80 +259,11 @@ const styles = StyleSheet.create({
   label: {
     letterSpacing: 0.6,
     fontSize: 12,
-  },
-  imagePreview: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: Radius.large,
-  },
-  imageEmpty: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: Radius.large,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.one,
-  },
-  imageEmptyIcon: {
-    fontSize: 52,
-    marginBottom: Spacing.one,
-  },
-  thumbnails: {
-    gap: Spacing.two,
-    paddingVertical: Spacing.half,
-  },
-  thumbnail: {
-    width: 76,
-    height: 76,
-  },
-  thumbnailImage: {
-    width: 76,
-    height: 76,
-    borderRadius: Radius.small,
-  },
-  coverBadge: {
-    position: 'absolute',
-    left: 0,
-    bottom: 0,
-    right: 0,
-    alignItems: 'center',
-    paddingVertical: 1,
-    borderBottomLeftRadius: Radius.small,
-    borderBottomRightRadius: Radius.small,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  coverBadgeLabel: {
-    color: '#ffffff',
-    fontSize: 11,
-  },
-  thumbnailRemove: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 24,
-    height: 24,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  },
-  thumbnailRemoveLabel: {
-    color: '#ffffff',
-    fontSize: 12,
-  },
+  },
   textArea: {
     minHeight: 120,
     paddingTop: Spacing.three - 2,
-  },
-  imageButtons: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  imageButton: {
-    flex: 1,
-  },
+  },
   input: {
     fontSize: 16,
     paddingVertical: Spacing.three - 2,
