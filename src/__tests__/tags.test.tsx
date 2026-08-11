@@ -3,7 +3,8 @@ import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@te
 
 import WardrobeScreen from '@/app/index';
 import { DefaultTagColor, TagColors } from '@/constants/theme';
-import { WardrobeProvider, useWardrobe } from '@/context/wardrobe-context';
+import { AppProviders } from '@/context/providers';
+import { useWardrobe } from '@/context/wardrobe-context';
 import { Garment } from '@/types/garment';
 import { Tag } from '@/types/tag';
 
@@ -41,9 +42,9 @@ async function seed(tags: Tag[] = TAGS) {
 /** Opens the tag manager the way a user does: overflow menu -> "Gestionar etiquetas". */
 async function openTagsManager() {
   await render(
-    <WardrobeProvider>
+    <AppProviders>
       <WardrobeScreen />
-    </WardrobeProvider>,
+    </AppProviders>,
   );
   await fireEvent.press(await screen.findByTestId('overflow-menu-button'));
   await fireEvent.press(await screen.findByTestId('menu-manage-tags'));
@@ -52,15 +53,15 @@ async function openTagsManager() {
 
 async function renderWardrobe() {
   await render(
-    <WardrobeProvider>
+    <AppProviders>
       <WardrobeScreen />
-    </WardrobeProvider>,
+    </AppProviders>,
   );
   await screen.findByText('Camisa vaquera');
 }
 
 async function renderContext() {
-  const view = await renderHook(() => useWardrobe(), { wrapper: WardrobeProvider });
+  const view = await renderHook(() => useWardrobe(), { wrapper: AppProviders });
   await waitFor(() => expect(view.result.current.isLoading).toBe(false));
   return view;
 }

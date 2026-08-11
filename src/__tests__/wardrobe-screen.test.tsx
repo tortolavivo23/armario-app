@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 
 import WardrobeScreen from '@/app/index';
-import { WardrobeProvider } from '@/context/wardrobe-context';
+import { AppProviders } from '@/context/providers';
 import { Garment } from '@/types/garment';
 
 const GARMENTS: Garment[] = [
@@ -34,9 +34,9 @@ const GARMENTS: Garment[] = [
 
 function renderScreen() {
   return render(
-    <WardrobeProvider>
+    <AppProviders>
       <WardrobeScreen />
-    </WardrobeProvider>,
+    </AppProviders>,
   );
 }
 

@@ -4,7 +4,8 @@ import { Alert } from 'react-native';
 
 import OutfitsScreen from '@/app/outfits';
 import { TagColors } from '@/constants/theme';
-import { WardrobeProvider, useWardrobe } from '@/context/wardrobe-context';
+import { AppProviders } from '@/context/providers';
+import { useWardrobe } from '@/context/wardrobe-context';
 import { Garment } from '@/types/garment';
 import { Outfit } from '@/types/outfit';
 import { Tag } from '@/types/tag';
@@ -69,15 +70,15 @@ async function seed({ outfits = OUTFITS, garments = GARMENTS, tags = TAGS } = {}
 
 async function renderScreen() {
   await render(
-    <WardrobeProvider>
+    <AppProviders>
       <OutfitsScreen />
-    </WardrobeProvider>,
+    </AppProviders>,
   );
   await waitFor(() => expect(screen.getByTestId('outfits-list')).toBeOnTheScreen());
 }
 
 async function renderContext() {
-  const view = await renderHook(() => useWardrobe(), { wrapper: WardrobeProvider });
+  const view = await renderHook(() => useWardrobe(), { wrapper: AppProviders });
   await waitFor(() => expect(view.result.current.isLoading).toBe(false));
   return view;
 }

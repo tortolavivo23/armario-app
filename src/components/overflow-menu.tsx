@@ -3,23 +3,31 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
 
-import { CardShadow, Radius, Spacing } from '@/constants/theme';
+import { Accent, CardShadow, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type OverflowMenuItem = {
   label: string;
   icon?: string;
   onPress: () => void;
+  /** Marks the item as the active choice, e.g. the theme currently in use. */
+  selected?: boolean;
   testID?: string;
 };
 
-type OverflowMenuProps = {
+export type OverflowMenuGroup = {
+  /** Heading above the group. Omit for the first, unlabelled group. */
+  title?: string;
   items: OverflowMenuItem[];
+};
+
+type OverflowMenuProps = {
+  groups: OverflowMenuGroup[];
   testID?: string;
 };
 
 /** "⋯" button that drops a small menu below itself, anchored to the top right. */
-export function OverflowMenu({ items, testID = 'overflow-menu' }: OverflowMenuProps) {
+export function OverflowMenu({ groups, testID = 'overflow-menu' }: OverflowMenuProps) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
 
@@ -55,21 +63,47 @@ export function OverflowMenu({ items, testID = 'overflow-menu' }: OverflowMenuPr
               CardShadow,
               { backgroundColor: theme.backgroundElement, borderColor: theme.border },
             ]}>
-            {items.map((item) => (
-              <Pressable
-                key={item.label}
-                testID={item.testID}
-                onPress={() => {
-                  setOpen(false);
-                  item.onPress();
-                }}
-                style={({ pressed }) => [
-                  styles.item,
-                  pressed && { backgroundColor: theme.backgroundSelected },
-                ]}>
-                {item.icon && <ThemedText style={styles.itemIcon}>{item.icon}</ThemedText>}
-                <ThemedText type="smallBold">{item.label}</ThemedText>
-              </Pressable>
+            {groups.map((group, index) => (
+              <View key={group.title ?? `group-${index}`}>
+                {index > 0 && <View style={[styles.divider, { backgroundColor: theme.border }]} />}
+
+                {group.title && (
+                  <ThemedText
+                    type="smallBold"
+                    themeColor="textSecondary"
+                    style={styles.groupTitle}>
+                    {group.title}
+                  </ThemedText>
+                )}
+
+                {group.items.map((item) => (
+                  <Pressable
+                    key={item.label}
+                    testID={item.testID}
+                    accessibilityRole="button"
+                    accessibilityState={
+                      item.selected == null ? undefined : { selected: item.selected }
+                    }
+                    onPress={() => {
+                      setOpen(false);
+                      item.onPress();
+                    }}
+                    style={({ pressed }) => [
+                      styles.item,
+                      pressed && { backgroundColor: theme.backgroundSelected },
+                    ]}>
+                    {item.icon && <ThemedText style={styles.itemIcon}>{item.icon}</ThemedText>}
+                    <ThemedText type="smallBold" style={styles.itemLabel}>
+                      {item.label}
+                    </ThemedText>
+                    {item.selected && (
+                      <ThemedText type="smallBold" style={styles.check}>
+                        ✓
+                      </ThemedText>
+                    )}
+                  </Pressable>
+                ))}
+              </View>
             ))}
           </View>
         </Pressable>
@@ -102,11 +136,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
   },
   sheet: {
-    minWidth: 220,
+    minWidth: 240,
     borderRadius: Radius.medium,
     borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: Spacing.one,
     overflow: 'hidden',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: Spacing.one,
+  },
+  groupTitle: {
+    letterSpacing: 0.6,
+    fontSize: 11,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.one,
+    paddingBottom: Spacing.half,
   },
   item: {
     flexDirection: 'row',
@@ -117,5 +162,11 @@ const styles = StyleSheet.create({
   },
   itemIcon: {
     fontSize: 16,
+  },
+  itemLabel: {
+    flex: 1,
+  },
+  check: {
+    color: Accent,
   },
 });

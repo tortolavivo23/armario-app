@@ -17,6 +17,7 @@ import {
   Radius,
   Spacing,
 } from '@/constants/theme';
+import { ThemePreferences, useThemePreference } from '@/context/theme-context';
 import { useWardrobe } from '@/context/wardrobe-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -25,6 +26,7 @@ const GRID_GAP = Spacing.three;
 
 export default function WardrobeScreen() {
   const { garments, isLoading, removeGarment } = useWardrobe();
+  const { preference, setPreference } = useThemePreference();
   const theme = useTheme();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -88,12 +90,26 @@ export default function WardrobeScreen() {
       <View style={styles.titleSpacer} />
 
       <OverflowMenu
-        items={[
+        groups={[
           {
-            label: 'Gestionar etiquetas',
-            icon: '🏷️',
-            testID: 'menu-manage-tags',
-            onPress: () => setIsManagingTags(true),
+            items: [
+              {
+                label: 'Gestionar etiquetas',
+                icon: '🏷️',
+                testID: 'menu-manage-tags',
+                onPress: () => setIsManagingTags(true),
+              },
+            ],
+          },
+          {
+            title: 'APARIENCIA',
+            items: ThemePreferences.map((option) => ({
+              label: option.label,
+              icon: option.icon,
+              testID: `menu-theme-${option.value}`,
+              selected: preference === option.value,
+              onPress: () => setPreference(option.value),
+            })),
           },
         ]}
       />

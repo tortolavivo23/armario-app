@@ -1,17 +1,22 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { Accent, Colors, tagTint } from '@/constants/theme';
+import { useColorScheme } from '@/context/theme-context';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colors = Colors[scheme];
 
   return (
     <NativeTabs
       backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
+      // The indicator is a pill drawn behind the selected icon, so it needs to
+      // contrast with the bar; tintColor then keeps the icon legible on top of
+      // it. Leaving the indicator the same colour as the bar made the selected
+      // icon disappear.
+      indicatorColor={tagTint(Accent, scheme === 'dark' ? 0.3 : 0.16)}
+      tintColor={Accent}
+      labelStyle={{ selected: { color: Accent } }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Armario</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
