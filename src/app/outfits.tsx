@@ -1,34 +1,27 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EmptyState } from '@/components/empty-state';
+import { FilterSummary } from '@/components/filter-summary';
 import { GarmentDetailModal } from '@/components/garment-detail-modal';
 import { GarmentEditModal } from '@/components/garment-edit-modal';
 import { OutfitCard } from '@/components/outfit-card';
 import { OutfitDetailModal } from '@/components/outfit-detail-modal';
 import { OutfitEditorModal } from '@/components/outfit-editor-modal';
+import { SearchBar } from '@/components/search-bar';
 import { TagFilter } from '@/components/tag-filter';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import {
-  Accent,
-  BottomTabInset,
-  MaxContentWidth,
-  MinCardWidth,
-  Radius,
-  Spacing,
-} from '@/constants/theme';
+import { Accent, BottomTabInset, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useWardrobe } from '@/context/wardrobe-context';
+import { GridGap, GridPadding, useGridLayout } from '@/hooks/use-grid-layout';
 import { useTheme } from '@/hooks/use-theme';
-
-const GRID_PADDING = Spacing.four;
-const GRID_GAP = Spacing.three;
 
 export default function OutfitsScreen() {
   const { outfits, garments, isLoading, removeOutfit, removeGarment } = useWardrobe();
   const theme = useTheme();
-  const { width, height } = useWindowDimensions();
-  const isLandscape = width > height;
+  const { isLandscape, numColumns, cardWidth, imageAspectRatio } = useGridLayout();
 
   const [query, setQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -71,11 +64,6 @@ export default function OutfitsScreen() {
     setSelectedTags([]);
   }
 
-  // Exact card widths keep a lone card in the last row from stretching across it.
-  const availableWidth = Math.min(width, MaxContentWidth) - GRID_PADDING * 2;
-  const numColumns = Math.max(2, Math.floor(availableWidth / MinCardWidth));
-  const cardWidth = (availableWidth - GRID_GAP * (numColumns - 1)) / numColumns;
-
   const hasFilters = query.trim().length > 0 || selectedTags.length > 0;
   const isEmpty = !isLoading && outfits.length === 0;
   const noResults = !isLoading && outfits.length > 0 && filteredOutfits.length === 0;
@@ -112,29 +100,7 @@ export default function OutfitsScreen() {
   );
 
   const searchBar = (
-    <View
-      style={[
-        styles.searchBar,
-        isLandscape && styles.searchBarLandscape,
-        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-      ]}>
-      <ThemedText themeColor="textSecondary" style={styles.searchIcon}>
-        🔍
-      </ThemedText>
-      <TextInput
-        testID="outfits-search"
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Buscar por nombre…"
-        placeholderTextColor={theme.textSecondary}
-        style={[styles.searchInput, { color: theme.text }]}
-      />
-      {query.length > 0 && (
-        <Pressable testID="outfits-search-clear" onPress={() => setQuery('')} hitSlop={10}>
-          <ThemedText themeColor="textSecondary">✕</ThemedText>
-        </Pressable>
-      )}
-    </View>
+    <SearchBar testID="outfits-search" value={query} onChangeText={setQuery} compact={isLandscape} />
   );
 
   const listHeader = (
@@ -163,49 +129,35 @@ export default function OutfitsScreen() {
           )}
 
           {hasFilters && (
-            <View style={styles.resultRow}>
-              <ThemedText type="small" themeColor="textSecondary">
-                {filteredOutfits.length}{' '}
-                {filteredOutfits.length === 1 ? 'outfit encontrado' : 'outfits encontrados'}
-              </ThemedText>
-              <Pressable testID="outfits-clear-filters" onPress={clearFilters} hitSlop={10}>
-                <ThemedText type="smallBold" style={styles.clearLink}>
-                  Limpiar filtros
-                </ThemedText>
-              </Pressable>
-            </View>
+            <FilterSummary
+              testID="outfits-clear-filters"
+              count={filteredOutfits.length}
+              singular="outfit encontrado"
+              plural="outfits encontrados"
+              onClear={clearFilters}
+            />
           )}
         </>
       )}
 
       {isEmpty && (
-        <ThemedView
-          type="backgroundElement"
-          style={[styles.emptyState, { borderColor: theme.border }]}>
-          <ThemedText style={styles.emptyIcon}>👗</ThemedText>
-          <ThemedText type="smallBold" style={styles.emptyTitle}>
-            Todavía no hay outfits
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.emptyHint}>
-            {garments.length === 0
+        <EmptyState
+          icon="👗"
+          title="Todavía no hay outfits"
+          hint={
+            garments.length === 0
               ? 'Un outfit agrupa prendas que ya tienes. Añade alguna prenda para empezar.'
-              : 'Toca «＋ Nuevo» para combinar prendas de tu armario.'}
-          </ThemedText>
-        </ThemedView>
+              : 'Toca «＋ Nuevo» para combinar prendas de tu armario.'
+          }
+        />
       )}
 
       {noResults && (
-        <ThemedView
-          type="backgroundElement"
-          style={[styles.emptyState, { borderColor: theme.border }]}>
-          <ThemedText style={styles.emptyIcon}>🔍</ThemedText>
-          <ThemedText type="smallBold" style={styles.emptyTitle}>
-            Sin resultados
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.emptyHint}>
-            Prueba a cambiar la búsqueda o quitar algún filtro.
-          </ThemedText>
-        </ThemedView>
+        <EmptyState
+          icon="🔍"
+          title="Sin resultados"
+          hint="Prueba a cambiar la búsqueda o quitar algún filtro."
+        />
       )}
     </View>
   );
@@ -227,7 +179,7 @@ export default function OutfitsScreen() {
             <OutfitCard
               outfit={item}
               width={cardWidth}
-              imageAspectRatio={isLandscape ? 3 / 2 : 1}
+              imageAspectRatio={imageAspectRatio}
               onPress={() => setSelectedId(item.id)}
             />
           )}
@@ -286,12 +238,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   list: {
-    paddingHorizontal: GRID_PADDING,
+    paddingHorizontal: GridPadding,
     paddingBottom: BottomTabInset + Spacing.four,
-    gap: GRID_GAP,
+    gap: GridGap,
   },
   row: {
-    gap: GRID_GAP,
+    gap: GridGap,
   },
   header: {
     gap: Spacing.three,
@@ -344,52 +296,5 @@ const styles = StyleSheet.create({
   },
   newButtonLabel: {
     color: '#ffffff',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
-    minHeight: 48,
-  },
-  searchBarLandscape: {
-    minHeight: 44,
-  },
-  searchIcon: {
-    fontSize: 15,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: Spacing.two,
-  },
-  resultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
-  clearLink: {
-    color: Accent,
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: Spacing.five,
-    borderRadius: Radius.large,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.one,
-    marginTop: Spacing.two,
-  },
-  emptyIcon: {
-    fontSize: 44,
-    marginBottom: Spacing.two,
-  },
-  emptyTitle: {
-    fontSize: 17,
-  },
-  emptyHint: {
-    textAlign: 'center',
   },
 });
