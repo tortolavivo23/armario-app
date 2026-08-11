@@ -40,6 +40,7 @@ describe('GarmentForm validation', () => {
       imageUris: [],
       description: '',
       tags: [],
+      wardrobeId: null,
     });
   });
 
@@ -185,6 +186,7 @@ describe('GarmentForm editing mode', () => {
         imageUris: ['file:///a.jpg'],
         description: '',
         tags: ['casual'],
+        wardrobeId: null,
       },
     });
 
@@ -200,6 +202,7 @@ describe('GarmentForm editing mode', () => {
         imageUris: ['file:///a.jpg'],
         description: '',
         tags: ['casual'],
+        wardrobeId: null,
       },
     });
 
@@ -212,6 +215,7 @@ describe('GarmentForm editing mode', () => {
       imageUris: ['file:///a.jpg'],
       description: '',
       tags: ['casual'],
+      wardrobeId: null,
     });
   });
 

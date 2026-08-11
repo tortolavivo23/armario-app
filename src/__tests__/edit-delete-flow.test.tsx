@@ -13,6 +13,7 @@ const GARMENTS: Garment[] = [
     imageUris: ['file:///documents/garments/a.jpg'],
     description: '',
     tags: ['casual'],
+    wardrobeId: null,
     createdAt: 1_700_000_000_000,
   },
   {
@@ -21,6 +22,7 @@ const GARMENTS: Garment[] = [
     imageUris: [],
     description: '',
     tags: [],
+    wardrobeId: null,
     createdAt: 1_700_000_001_000,
   },
 ];

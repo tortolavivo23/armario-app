@@ -17,6 +17,7 @@ function makeGarments(count: number): Garment[] {
     imageUris: [],
     description: '',
     tags: [],
+    wardrobeId: null,
     createdAt: index,
   }));
 }

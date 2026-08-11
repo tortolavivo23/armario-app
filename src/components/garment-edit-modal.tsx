@@ -25,11 +25,12 @@ export function GarmentEditModal({ garment, onClose }: GarmentEditModalProps) {
               // Remount when switching garments so the fields reload from the new one.
               key={garment.id}
               title="Editar prenda"
-              subtitle="Cambia el nombre, la foto o las etiquetas"
+              subtitle="Cambia el nombre, la foto, el armario o las etiquetas"
               submitLabel="Guardar cambios"
               savingLabel="Guardando…"
               initialValues={{
                 name: garment.name,
+                wardrobeId: garment.wardrobeId,
                 imageUris: garment.imageUris,
                 description: garment.description,
                 tags: garment.tags,

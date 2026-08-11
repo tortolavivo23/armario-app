@@ -8,6 +8,8 @@ import { GarmentEditModal } from '@/components/garment-edit-modal';
 import { OverflowMenu } from '@/components/overflow-menu';
 import { TagFilter } from '@/components/tag-filter';
 import { TagsManagerModal } from '@/components/tags-manager-modal';
+import { WardrobeSwitcher } from '@/components/wardrobe-switcher';
+import { WardrobesManagerModal } from '@/components/wardrobes-manager-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
@@ -20,12 +22,13 @@ import {
 import { useThemePreference } from '@/context/theme-context';
 import { useWardrobe } from '@/context/wardrobe-context';
 import { useTheme } from '@/hooks/use-theme';
+import { matchesWardrobe } from '@/types/wardrobe';
 
 const GRID_PADDING = Spacing.four;
 const GRID_GAP = Spacing.three;
 
 export default function WardrobeScreen() {
-  const { garments, isLoading, removeGarment } = useWardrobe();
+  const { garments, isLoading, removeGarment, activeWardrobe } = useWardrobe();
   const { isDark, toggleDark } = useThemePreference();
   const theme = useTheme();
   const { width, height } = useWindowDimensions();
@@ -36,23 +39,34 @@ export default function WardrobeScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isManagingTags, setIsManagingTags] = useState(false);
+  const [isManagingWardrobes, setIsManagingWardrobes] = useState(false);
 
   const selectedGarment = garments.find((g) => g.id === selectedId) ?? null;
   const editingGarment = garments.find((g) => g.id === editingId) ?? null;
 
+  // Everything on this screen is scoped to the wardrobe being viewed, so the
+  // tag filter only offers tags you can actually see results for.
+  const wardrobeGarments = useMemo(
+    () => garments.filter((garment) => matchesWardrobe(garment.wardrobeId, activeWardrobe)),
+    [garments, activeWardrobe],
+  );
+
   const allTags = useMemo(
-    () => Array.from(new Set(garments.flatMap((g) => g.tags))).sort((a, b) => a.localeCompare(b)),
-    [garments],
+    () =>
+      Array.from(new Set(wardrobeGarments.flatMap((g) => g.tags))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [wardrobeGarments],
   );
 
   const filteredGarments = useMemo(() => {
     const trimmedQuery = query.trim().toLowerCase();
-    return garments.filter((garment) => {
+    return wardrobeGarments.filter((garment) => {
       const matchesQuery = trimmedQuery.length === 0 || garment.name.toLowerCase().includes(trimmedQuery);
       const matchesTags = selectedTags.every((tag) => garment.tags.includes(tag));
       return matchesQuery && matchesTags;
     });
-  }, [garments, query, selectedTags]);
+  }, [wardrobeGarments, query, selectedTags]);
 
   function toggleTag(tag: string) {
     setSelectedTags((current) =>
@@ -71,18 +85,16 @@ export default function WardrobeScreen() {
   const cardWidth = (availableWidth - GRID_GAP * (numColumns - 1)) / numColumns;
 
   const hasFilters = query.trim().length > 0 || selectedTags.length > 0;
-  const isEmpty = !isLoading && garments.length === 0;
-  const noResults = !isLoading && garments.length > 0 && filteredGarments.length === 0;
+  const isEmpty = !isLoading && wardrobeGarments.length === 0;
+  const noResults = !isLoading && wardrobeGarments.length > 0 && filteredGarments.length === 0;
 
   const titleBlock = (
     <View style={styles.titleRow}>
-      <ThemedText type="title" style={[styles.title, isLandscape && styles.titleLandscape]}>
-        Mi armario
-      </ThemedText>
-      {garments.length > 0 && (
+      <WardrobeSwitcher compact={isLandscape} />
+      {wardrobeGarments.length > 0 && (
         <View style={[styles.countBadge, { backgroundColor: theme.backgroundSelected }]}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            {garments.length}
+            {wardrobeGarments.length}
           </ThemedText>
         </View>
       )}
@@ -91,6 +103,12 @@ export default function WardrobeScreen() {
 
       <OverflowMenu
         items={[
+          {
+            label: 'Gestionar armarios',
+            icon: '🚪',
+            testID: 'menu-manage-wardrobes',
+            onPress: () => setIsManagingWardrobes(true),
+          },
           {
             label: 'Gestionar etiquetas',
             icon: '🏷️',
@@ -183,10 +201,12 @@ export default function WardrobeScreen() {
           style={[styles.emptyState, { borderColor: theme.border }]}>
           <ThemedText style={styles.emptyIcon}>🧥</ThemedText>
           <ThemedText type="smallBold" style={styles.emptyTitle}>
-            Todavía no hay prendas
+            {garments.length === 0 ? 'Todavía no hay prendas' : 'Este armario está vacío'}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" style={styles.emptyHint}>
-            Ve a la pestaña Añadir para subir tu primera prenda.
+            {garments.length === 0
+              ? 'Ve a la pestaña Añadir para subir tu primera prenda.'
+              : 'Añade prendas aquí o muévelas desde otro armario al editarlas.'}
           </ThemedText>
         </ThemedView>
       )}
@@ -246,6 +266,11 @@ export default function WardrobeScreen() {
         <GarmentEditModal garment={editingGarment} onClose={() => setEditingId(null)} />
 
         <TagsManagerModal visible={isManagingTags} onClose={() => setIsManagingTags(false)} />
+
+        <WardrobesManagerModal
+          visible={isManagingWardrobes}
+          onClose={() => setIsManagingWardrobes(false)}
+        />
       </SafeAreaView>
     </ThemedView>
   );

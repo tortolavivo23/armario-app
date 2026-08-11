@@ -15,6 +15,7 @@ import {
 import { Button } from './button';
 import { GarmentImage } from './garment-image';
 import { TagPicker } from './tag-picker';
+import { WardrobePicker } from './wardrobe-picker';
 import { ThemedText } from './themed-text';
 
 import { Accent, BottomTabInset, Radius, Spacing } from '@/constants/theme';
@@ -22,6 +23,8 @@ import { useTheme } from '@/hooks/use-theme';
 
 export type GarmentFormValues = {
   name: string;
+  /** The wardrobe it is filed into, or `null` while unfiled. */
+  wardrobeId: string | null;
   /** In display order; the first one becomes the cover in the grid. */
   imageUris: string[];
   description: string;
@@ -40,7 +43,13 @@ type GarmentFormProps = {
   onSubmit: (values: GarmentFormValues) => Promise<void>;
 };
 
-const EMPTY_VALUES: GarmentFormValues = { name: '', imageUris: [], description: '', tags: [] };
+const EMPTY_VALUES: GarmentFormValues = {
+  name: '',
+  wardrobeId: null,
+  imageUris: [],
+  description: '',
+  tags: [],
+};
 
 export function GarmentForm({
   title,
@@ -57,6 +66,7 @@ export function GarmentForm({
   const isLandscape = width > height;
 
   const [name, setName] = useState(initialValues?.name ?? '');
+  const [wardrobeId, setWardrobeId] = useState<string | null>(initialValues?.wardrobeId ?? null);
   const [imageUris, setImageUris] = useState<string[]>(initialValues?.imageUris ?? []);
   const [description, setDescription] = useState(initialValues?.description ?? '');
   const [tags, setTags] = useState<string[]>(initialValues?.tags ?? []);
@@ -109,9 +119,16 @@ export function GarmentForm({
     if (!canSave) return;
     setIsSaving(true);
     try {
-      await onSubmit({ name: name.trim(), imageUris, description: description.trim(), tags });
+      await onSubmit({
+        name: name.trim(),
+        wardrobeId,
+        imageUris,
+        description: description.trim(),
+        tags,
+      });
       if (resetOnSubmit) {
         setName(EMPTY_VALUES.name);
+        setWardrobeId(EMPTY_VALUES.wardrobeId);
         setImageUris(EMPTY_VALUES.imageUris);
         setDescription(EMPTY_VALUES.description);
         setTags(EMPTY_VALUES.tags);
@@ -258,6 +275,8 @@ export function GarmentForm({
           ]}
         />
       </View>
+
+      <WardrobePicker value={wardrobeId} onChange={setWardrobeId} testIDPrefix="garment-form" />
 
       <TagPicker
         tags={tags}

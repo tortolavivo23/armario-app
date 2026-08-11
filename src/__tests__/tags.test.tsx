@@ -15,6 +15,7 @@ const GARMENTS: Garment[] = [
     imageUris: [],
     description: '',
     tags: ['invierno', 'camisa'],
+    wardrobeId: null,
     createdAt: 1,
   },
   {
@@ -23,6 +24,7 @@ const GARMENTS: Garment[] = [
     imageUris: [],
     description: '',
     tags: ['verano', 'pantalón'],
+    wardrobeId: null,
     createdAt: 2,
   },
 ];
@@ -103,6 +105,7 @@ describe('tag catalogue', () => {
         imageUris: [],
         description: '',
         tags: ['lana'],
+        wardrobeId: null,
       });
     });
 
@@ -118,6 +121,7 @@ describe('tag catalogue', () => {
         imageUris: [],
         description: '',
         tags: ['lana', 'invierno', 'punto'],
+        wardrobeId: null,
       });
     });
 
@@ -135,6 +139,7 @@ describe('tag catalogue', () => {
         imageUris: [],
         description: '',
         tags: ['invierno'],
+        wardrobeId: null,
       });
     });
 
