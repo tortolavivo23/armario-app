@@ -20,6 +20,14 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="outfits">
+        <NativeTabs.Trigger.Label>Outfits</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'square.stack', selected: 'square.stack.fill' }}
+          md={{ default: 'layers', selected: 'layers' }}
+        />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="add">
         <NativeTabs.Trigger.Label>Añadir</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon

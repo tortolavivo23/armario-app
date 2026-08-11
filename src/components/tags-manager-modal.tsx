@@ -24,26 +24,31 @@ type TagsManagerModalProps = {
  * wardrobe's overflow menu rather than taking up a tab.
  */
 export function TagsManagerModal({ visible, onClose }: TagsManagerModalProps) {
-  const { garments, tags, getTag, upsertTag, removeTag } = useWardrobe();
+  const { garments, outfits, tags, getTag, upsertTag, removeTag } = useWardrobe();
   const theme = useTheme();
   const [editingName, setEditingName] = useState<string | null>(null);
 
-  // Tags a garment uses but that were never opened in the editor still belong
-  // here, so the list is the union of both sources.
+  // Tags a garment or an outfit uses but that were never opened in the editor
+  // still belong here, so the list is the union of all three sources.
   const allTags: Tag[] = useMemo(() => {
-    const names = new Set([...tags.map((tag) => tag.name), ...garments.flatMap((g) => g.tags)]);
+    const names = new Set([
+      ...tags.map((tag) => tag.name),
+      ...garments.flatMap((g) => g.tags),
+      ...outfits.flatMap((o) => o.tags),
+    ]);
     return Array.from(names)
       .sort((a, b) => a.localeCompare(b))
       .map(getTag);
-  }, [tags, garments, getTag]);
+  }, [tags, garments, outfits, getTag]);
 
+  /** How many garments and outfits carry each tag. */
   const usage = useMemo(() => {
     const counts = new Map<string, number>();
-    garments.forEach((garment) =>
-      garment.tags.forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)),
+    [...garments, ...outfits].forEach((item) =>
+      item.tags.forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)),
     );
     return counts;
-  }, [garments]);
+  }, [garments, outfits]);
 
   const grouped = useMemo(() => {
     const groups = new Map<string, Tag[]>();
