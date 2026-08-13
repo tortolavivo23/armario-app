@@ -1,3 +1,4 @@
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,6 +33,22 @@ export default function OutfitsScreen() {
   // leaving the tab.
   const [garmentId, setGarmentId] = useState<string | null>(null);
   const [editingGarmentId, setEditingGarmentId] = useState<string | null>(null);
+
+  // The wardrobe tab links here with ?outfit=<id> when you tap one of the
+  // outfits a garment appears in. Adjusting during render opens it without the
+  // extra paint an effect would cost, and the parameter is dropped straight
+  // away so going back to this tab later does not reopen it.
+  const { outfit: requestedOutfit } = useLocalSearchParams<{ outfit?: string }>();
+  // Starts undefined rather than at the current value, so a parameter already
+  // there on the first render is acted on instead of being swallowed.
+  const [lastRequested, setLastRequested] = useState<string | undefined>(undefined);
+  if (requestedOutfit !== lastRequested) {
+    setLastRequested(requestedOutfit);
+    if (requestedOutfit) {
+      setSelectedId(requestedOutfit);
+      router.setParams({ outfit: undefined });
+    }
+  }
 
   const selectedOutfit = outfits.find((outfit) => outfit.id === selectedId) ?? null;
   const editingOutfit = outfits.find((outfit) => outfit.id === editingId) ?? null;
@@ -217,6 +234,11 @@ export default function OutfitsScreen() {
 
         <GarmentDetailModal
           garment={openGarment}
+          // Already on the outfits tab, so this just swaps which one is open.
+          onOpenOutfit={(id) => {
+            setGarmentId(null);
+            setSelectedId(id);
+          }}
           onClose={() => setGarmentId(null)}
           onEdit={(id) => {
             setGarmentId(null);

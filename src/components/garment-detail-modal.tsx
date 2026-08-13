@@ -1,8 +1,8 @@
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from './button';
 import { GarmentGallery } from './garment-gallery';
+import { OverflowMenu } from './overflow-menu';
 import { TagChip } from './tag-chip';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
@@ -17,6 +17,8 @@ type GarmentDetailModalProps = {
   onClose: () => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  /** Opens one of the outfits the garment appears in. */
+  onOpenOutfit?: (id: string) => void;
 };
 
 function formatDate(timestamp: number) {
@@ -27,14 +29,36 @@ function formatDate(timestamp: number) {
   });
 }
 
-export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: GarmentDetailModalProps) {
+export function GarmentDetailModal({
+  garment,
+  onClose,
+  onEdit,
+  onDelete,
+  onOpenOutfit,
+}: GarmentDetailModalProps) {
   const theme = useTheme();
-  const { getTag } = useWardrobe();
+  const { getTag, outfits } = useWardrobe();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
+  // Outfits reference garments by id, and until now that relationship was only
+  // visible from the outfit's side.
+  const wearing = garment
+    ? outfits.filter((outfit) => outfit.garmentIds.includes(garment.id))
+    : [];
+
   function confirmDelete(target: Garment) {
-    Alert.alert('Eliminar prenda', `¿Seguro que quieres eliminar "${target.name}"?`, [
+    // Deleting a garment quietly pulls it out of every outfit wearing it, the
+    // same way deleting a wardrobe unfiles its clothes — and like that one, it
+    // should say so before you commit to it.
+    const consequence =
+      wearing.length === 0
+        ? ''
+        : wearing.length === 1
+          ? ` Se quitará del outfit «${wearing[0].name}».`
+          : ` Se quitará de ${wearing.length} outfits.`;
+
+    Alert.alert('Eliminar prenda', `¿Seguro que quieres eliminar "${target.name}"?${consequence}`, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Eliminar', style: 'destructive', onPress: () => onDelete(target.id) },
     ]);
@@ -68,9 +92,30 @@ export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: Garme
 
               <View style={styles.content}>
                 <ScrollView contentContainerStyle={styles.contentScroll}>
-                  <ThemedText type="subtitle" style={styles.title}>
-                    {garment.name}
-                  </ThemedText>
+                  <View style={styles.titleRow}>
+                    <ThemedText type="subtitle" style={styles.title}>
+                      {garment.name}
+                    </ThemedText>
+
+                    <OverflowMenu
+                      testID="garment-detail-menu"
+                      items={[
+                        {
+                          label: 'Editar prenda',
+                          icon: '✏️',
+                          testID: 'garment-detail-edit',
+                          onPress: () => onEdit(garment.id),
+                        },
+                        {
+                          label: 'Eliminar prenda',
+                          icon: '🗑',
+                          testID: 'garment-detail-delete',
+                          danger: true,
+                          onPress: () => confirmDelete(garment),
+                        },
+                      ]}
+                    />
+                  </View>
 
                   <ThemedText type="small" themeColor="textSecondary">
                     Añadida el {formatDate(garment.createdAt)}
@@ -104,21 +149,43 @@ export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: Garme
                   ) : (
                     <ThemedText themeColor="textSecondary">Esta prenda no tiene etiquetas.</ThemedText>
                   )}
-                </ScrollView>
 
-                <View style={styles.actions}>
-                  <Button
-                    testID="garment-detail-edit"
-                    label="Editar prenda"
-                    onPress={() => onEdit(garment.id)}
-                  />
-                  <Button
-                    testID="garment-detail-delete"
-                    label="Eliminar prenda"
-                    variant="danger"
-                    onPress={() => confirmDelete(garment)}
-                  />
-                </View>
+                  {wearing.length > 0 && (
+                    <>
+                      <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+                      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.label}>
+                        APARECE EN
+                      </ThemedText>
+
+                      <View testID="garment-detail-outfits" style={styles.outfits}>
+                        {wearing.map((outfit) => (
+                          <Pressable
+                            key={outfit.id}
+                            testID={`garment-detail-outfit-${outfit.id}`}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Ver el outfit ${outfit.name}`}
+                            onPress={() => onOpenOutfit?.(outfit.id)}
+                            disabled={onOpenOutfit == null}
+                            style={({ pressed }) => pressed && styles.pressed}>
+                            <View
+                              style={[
+                                styles.outfitPill,
+                                { backgroundColor: theme.backgroundSelected, borderColor: theme.border },
+                              ]}>
+                              <ThemedText type="smallBold">{outfit.name}</ThemedText>
+                              {onOpenOutfit && (
+                                <ThemedText type="smallBold" themeColor="textSecondary">
+                                  ›
+                                </ThemedText>
+                              )}
+                            </View>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                </ScrollView>
               </View>
             </View>
           )}
@@ -129,6 +196,25 @@ export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: Garme
 }
 
 const styles = StyleSheet.create({
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.three,
+  },
+  outfits: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  outfitPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.one + 2,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   container: {
     flex: 1,
   },
@@ -198,9 +284,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
-  },
-  actions: {
-    gap: Spacing.two,
-    paddingTop: Spacing.three,
   },
 });

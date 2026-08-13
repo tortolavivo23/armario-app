@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -216,6 +217,12 @@ export default function WardrobeScreen() {
         <GarmentDetailModal
           garment={selectedGarment}
           onClose={() => setSelectedId(null)}
+          // Outfits live on their own tab, so "see this outfit" means going
+          // there rather than stacking another modal on this one.
+          onOpenOutfit={(id) => {
+            setSelectedId(null);
+            router.navigate({ pathname: '/outfits', params: { outfit: id } });
+          }}
           onEdit={(id) => {
             setSelectedId(null);
             setEditingId(id);

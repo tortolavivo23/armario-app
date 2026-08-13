@@ -3,7 +3,7 @@ import { Modal, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
 
-import { Accent, CardShadow, Radius, Spacing, tagTint } from '@/constants/theme';
+import { Accent, CardShadow, Danger, Radius, Spacing, tagTint } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type OverflowMenuItem = {
@@ -15,6 +15,8 @@ export type OverflowMenuItem = {
    * open, so the change can be seen taking effect behind it.
    */
   switchValue?: boolean;
+  /** Renders the row in red, for the destructive entry of a menu. */
+  danger?: boolean;
   testID?: string;
 };
 
@@ -80,7 +82,9 @@ export function OverflowMenu({ items, testID = 'overflow-menu' }: OverflowMenuPr
                       pressed && { backgroundColor: theme.backgroundSelected },
                     ]}>
                     {item.icon && <ThemedText style={styles.itemIcon}>{item.icon}</ThemedText>}
-                    <ThemedText type="smallBold" style={styles.itemLabel}>
+                    <ThemedText
+                      type="smallBold"
+                      style={[styles.itemLabel, item.danger && styles.itemLabelDanger]}>
                       {item.label}
                     </ThemedText>
 
@@ -152,5 +156,8 @@ const styles = StyleSheet.create({
   },
   itemLabel: {
     flex: 1,
+  },
+  itemLabelDanger: {
+    color: Danger,
   },
 });

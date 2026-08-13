@@ -209,3 +209,95 @@ describe('WardrobeScreen with no garments', () => {
     expect(screen.queryByTestId('wardrobe-tag-filter-button')).not.toBeOnTheScreen();
   });
 });
+
+describe('searching within the tag filter sheet', () => {
+  // The search field only appears once the list is long enough to need it.
+  const MANY: Garment[] = [
+    {
+      id: 'm1',
+      name: 'Abrigo',
+      imageUris: [],
+      description: '',
+      tags: ['invierno', 'lana', 'abrigo'],
+      wardrobeId: null,
+      createdAt: 1,
+    },
+    {
+      id: 'm2',
+      name: 'Camiseta',
+      imageUris: [],
+      description: '',
+      tags: ['verano', 'algodón', 'estación seca'],
+      wardrobeId: null,
+      createdAt: 2,
+    },
+  ];
+
+  async function renderWithManyTags() {
+    await AsyncStorage.clear();
+    await AsyncStorage.setItem('wardrobe-garments', JSON.stringify(MANY));
+    await renderScreen();
+    await screen.findByText('Abrigo');
+    await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-button'));
+    return within(await screen.findByTestId('wardrobe-tag-filter'));
+  }
+
+  it('narrows the chips to what was typed', async () => {
+    const sheet = await renderWithManyTags();
+    expect(sheet.getByText('lana')).toBeOnTheScreen();
+
+    await fireEvent.changeText(screen.getByTestId('wardrobe-tag-filter-search'), 'ver');
+
+    const narrowed = within(screen.getByTestId('wardrobe-tag-filter'));
+    expect(narrowed.getByText('verano')).toBeOnTheScreen();
+    expect(narrowed.queryByText('lana')).not.toBeOnTheScreen();
+  });
+
+  it('ignores accents, so "estacion" finds "estación seca"', async () => {
+    await renderWithManyTags();
+
+    await fireEvent.changeText(screen.getByTestId('wardrobe-tag-filter-search'), 'estacion');
+
+    expect(within(screen.getByTestId('wardrobe-tag-filter')).getByText('estación seca')).toBeOnTheScreen();
+  });
+
+  it('says so when nothing matches', async () => {
+    await renderWithManyTags();
+
+    await fireEvent.changeText(screen.getByTestId('wardrobe-tag-filter-search'), 'zzz');
+
+    expect(await screen.findByTestId('wardrobe-tag-filter-no-matches')).toBeOnTheScreen();
+  });
+
+  it('still filters the grid when a narrowed chip is picked', async () => {
+    await renderWithManyTags();
+
+    await fireEvent.changeText(screen.getByTestId('wardrobe-tag-filter-search'), 'lana');
+    await fireEvent.press(within(screen.getByTestId('wardrobe-tag-filter')).getByText('lana'));
+    await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-close'));
+
+    await waitFor(() => expect(screen.queryByText('Camiseta')).not.toBeOnTheScreen());
+    expect(screen.getByText('Abrigo')).toBeOnTheScreen();
+  });
+
+  it('forgets the typing when the sheet is reopened', async () => {
+    await renderWithManyTags();
+
+    await fireEvent.changeText(screen.getByTestId('wardrobe-tag-filter-search'), 'lana');
+    await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-close'));
+    await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-button'));
+
+    const reopened = within(await screen.findByTestId('wardrobe-tag-filter'));
+    expect(reopened.getByText('verano')).toBeOnTheScreen();
+  });
+
+  it('leaves the search out when there are only a few tags', async () => {
+    await renderScreen();
+    await screen.findByText('Camisa vaquera');
+
+    await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-button'));
+
+    await screen.findByTestId('wardrobe-tag-filter');
+    expect(screen.queryByTestId('wardrobe-tag-filter-search')).not.toBeOnTheScreen();
+  });
+});
