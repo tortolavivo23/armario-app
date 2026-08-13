@@ -7,6 +7,7 @@ import { TagFilter } from './tag-filter';
 import { ThemedText } from './themed-text';
 
 import { Accent, CardShadow, MaxContentWidth, Radius, Spacing, tagTint } from '@/constants/theme';
+import { useKeyboardInset } from '@/hooks/use-keyboard-inset';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -52,6 +53,9 @@ export function TagFilterButton({
 }: TagFilterButtonProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  // The sheet sits on the bottom edge, so without this the keyboard the search
+  // field summons covers the whole thing.
+  const keyboardInset = useKeyboardInset();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -105,7 +109,10 @@ export function TagFilterButton({
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
-        <Pressable testID={`${testID}-backdrop`} style={styles.backdrop} onPress={close}>
+        <Pressable
+          testID={`${testID}-backdrop`}
+          style={[styles.backdrop, { paddingBottom: keyboardInset }]}
+          onPress={close}>
           {/* Claiming the touch keeps taps on the sheet from dismissing it. */}
           <View
             onStartShouldSetResponder={() => true}
@@ -115,7 +122,9 @@ export function TagFilterButton({
               {
                 backgroundColor: theme.backgroundElement,
                 borderColor: theme.border,
-                paddingBottom: insets.bottom + Spacing.three,
+                // The navigation bar is behind the keyboard while it is up, so
+                // padding for it would only add a gap.
+                paddingBottom: (keyboardInset > 0 ? 0 : insets.bottom) + Spacing.three,
               },
             ]}>
             <View style={styles.handleRow}>
