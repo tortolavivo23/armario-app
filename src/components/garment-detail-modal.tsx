@@ -29,12 +29,28 @@ function formatDate(timestamp: number) {
 
 export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: GarmentDetailModalProps) {
   const theme = useTheme();
-  const { getTag } = useWardrobe();
+  const { getTag, outfits } = useWardrobe();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
+  // Outfits reference garments by id, and until now that relationship was only
+  // visible from the outfit's side.
+  const wearing = garment
+    ? outfits.filter((outfit) => outfit.garmentIds.includes(garment.id))
+    : [];
+
   function confirmDelete(target: Garment) {
-    Alert.alert('Eliminar prenda', `¿Seguro que quieres eliminar "${target.name}"?`, [
+    // Deleting a garment quietly pulls it out of every outfit wearing it, the
+    // same way deleting a wardrobe unfiles its clothes — and like that one, it
+    // should say so before you commit to it.
+    const consequence =
+      wearing.length === 0
+        ? ''
+        : wearing.length === 1
+          ? ` Se quitará del outfit «${wearing[0].name}».`
+          : ` Se quitará de ${wearing.length} outfits.`;
+
+    Alert.alert('Eliminar prenda', `¿Seguro que quieres eliminar "${target.name}"?${consequence}`, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Eliminar', style: 'destructive', onPress: () => onDelete(target.id) },
     ]);
@@ -104,6 +120,29 @@ export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: Garme
                   ) : (
                     <ThemedText themeColor="textSecondary">Esta prenda no tiene etiquetas.</ThemedText>
                   )}
+
+                  {wearing.length > 0 && (
+                    <>
+                      <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+                      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.label}>
+                        APARECE EN
+                      </ThemedText>
+
+                      <View testID="garment-detail-outfits" style={styles.outfits}>
+                        {wearing.map((outfit) => (
+                          <View
+                            key={outfit.id}
+                            style={[
+                              styles.outfitPill,
+                              { backgroundColor: theme.backgroundSelected, borderColor: theme.border },
+                            ]}>
+                            <ThemedText type="smallBold">{outfit.name}</ThemedText>
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  )}
                 </ScrollView>
 
                 <View style={styles.actions}>
@@ -129,6 +168,17 @@ export function GarmentDetailModal({ garment, onClose, onEdit, onDelete }: Garme
 }
 
 const styles = StyleSheet.create({
+  outfits: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  outfitPill: {
+    paddingVertical: Spacing.one + 2,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   container: {
     flex: 1,
   },
