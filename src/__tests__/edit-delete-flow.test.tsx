@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 import WardrobeScreen from '@/app/index';
 import { AppProviders } from '@/context/providers';
 import { Garment } from '@/types/garment';
+import { Outfit } from '@/types/outfit';
 
 const GARMENTS: Garment[] = [
   {
@@ -188,5 +189,85 @@ describe('deleting a garment', () => {
     // The name shows both on the card and in the still-open detail modal.
     expect(screen.getAllByText('Camisa vaquera').length).toBeGreaterThan(0);
     expect(screen.getByTestId('garment-detail-delete')).toBeOnTheScreen();
+  });
+});
+
+describe('the outfits a garment appears in', () => {
+  const OUTFITS: Outfit[] = [
+    {
+      id: 'o1',
+      name: 'Domingo de terraza',
+      garmentIds: ['a', 'b'],
+      description: '',
+      tags: [],
+      createdAt: 1,
+    },
+    { id: 'o2', name: 'Reunión de oficina', garmentIds: ['a'], description: '', tags: [], createdAt: 2 },
+  ];
+
+  async function renderWithOutfits() {
+    await AsyncStorage.setItem('wardrobe-outfits', JSON.stringify(OUTFITS));
+    await renderWardrobe();
+  }
+
+  it('lists them in the detail view', async () => {
+    await renderWithOutfits();
+    await openDetail('Camisa vaquera');
+
+    const section = within(await screen.findByTestId('garment-detail-outfits'));
+    expect(section.getByText('Domingo de terraza')).toBeOnTheScreen();
+    expect(section.getByText('Reunión de oficina')).toBeOnTheScreen();
+  });
+
+  it('leaves the section out for a garment no outfit wears', async () => {
+    // Only 'a' is worn here, so 'b' has nothing to show.
+    await AsyncStorage.setItem(
+      'wardrobe-outfits',
+      JSON.stringify([{ ...OUTFITS[1], garmentIds: ['a'] }]),
+    );
+    await renderWardrobe();
+    await openDetail('Bufanda');
+
+    expect(screen.queryByTestId('garment-detail-outfits')).not.toBeOnTheScreen();
+  });
+
+  // Deleting a garment quietly pulled it out of the outfits wearing it.
+  it('counts them in the delete confirmation', async () => {
+    await renderWithOutfits();
+    await openDetail('Camisa vaquera');
+
+    await fireEvent.press(screen.getByTestId('garment-detail-delete'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Eliminar prenda',
+      expect.stringContaining('Se quitará de 2 outfits.'),
+      expect.any(Array),
+    );
+  });
+
+  it('names the outfit when there is only one', async () => {
+    await renderWithOutfits();
+    await openDetail('Bufanda');
+
+    await fireEvent.press(screen.getByTestId('garment-detail-delete'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Eliminar prenda',
+      expect.stringContaining('Se quitará del outfit «Domingo de terraza».'),
+      expect.any(Array),
+    );
+  });
+
+  it('says nothing extra when no outfit wears it', async () => {
+    await renderWardrobe();
+    await openDetail('Camisa vaquera');
+
+    await fireEvent.press(screen.getByTestId('garment-detail-delete'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Eliminar prenda',
+      '¿Seguro que quieres eliminar "Camisa vaquera"?',
+      expect.any(Array),
+    );
   });
 });
