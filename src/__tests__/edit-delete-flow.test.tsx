@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { router } from 'expo-router';
 import { Alert } from 'react-native';
 
 import WardrobeScreen from '@/app/index';
@@ -38,15 +39,22 @@ async function renderWardrobe() {
   await screen.findByText('Camisa vaquera');
 }
 
+/** Edit and delete live behind the ⋯ menu of the detail view. */
+async function pressDetailAction(action: string) {
+  const prefix = action.startsWith('outfit') ? 'outfit-detail' : 'garment-detail';
+  await fireEvent.press(screen.getByTestId(`${prefix}-menu-button`));
+  await fireEvent.press(await screen.findByTestId(action));
+}
+
 /** Opens the detail modal for a garment by tapping its card. */
 async function openDetail(name: string) {
   await fireEvent.press(screen.getByText(name));
-  await screen.findByTestId('garment-detail-edit');
+  await screen.findByTestId('garment-detail-menu-button');
 }
 
 /** Presses "Eliminar" and then runs the destructive button of the confirmation Alert. */
 async function confirmDeleteAlert() {
-  await fireEvent.press(screen.getByTestId('garment-detail-delete'));
+  await pressDetailAction('garment-detail-delete');
   const buttons = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2];
   buttons?.find((button) => button.style === 'destructive')?.onPress?.();
 }
@@ -56,12 +64,27 @@ beforeEach(async () => {
   await AsyncStorage.clear();
 });
 
+describe('the ⋯ menu of the detail view', () => {
+  it('keeps edit and delete out of sight until it is opened', async () => {
+    await renderWardrobe();
+    await openDetail('Camisa vaquera');
+
+    expect(screen.queryByTestId('garment-detail-edit')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('garment-detail-delete')).not.toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId('garment-detail-menu-button'));
+
+    expect(await screen.findByTestId('garment-detail-edit')).toBeOnTheScreen();
+    expect(screen.getByTestId('garment-detail-delete')).toBeOnTheScreen();
+  });
+});
+
 describe('garment detail modal', () => {
   it('opens with the garment name and its tags', async () => {
     await renderWardrobe();
     await openDetail('Camisa vaquera');
 
-    expect(screen.getByTestId('garment-detail-edit')).toBeOnTheScreen();
+    expect(screen.getByTestId('garment-detail-menu-button')).toBeOnTheScreen();
     expect(screen.getAllByText('casual').length).toBeGreaterThan(0);
   });
 
@@ -78,7 +101,7 @@ describe('garment detail modal', () => {
 
     await fireEvent.press(screen.getByTestId('garment-detail-close'));
 
-    await waitFor(() => expect(screen.queryByTestId('garment-detail-edit')).not.toBeOnTheScreen());
+    await waitFor(() => expect(screen.queryByTestId('garment-detail-menu-button')).not.toBeOnTheScreen());
     expect(screen.getByText('Camisa vaquera')).toBeOnTheScreen();
   });
 });
@@ -88,7 +111,7 @@ describe('editing an existing garment', () => {
     await renderWardrobe();
     await openDetail('Camisa vaquera');
 
-    await fireEvent.press(screen.getByTestId('garment-detail-edit'));
+    await pressDetailAction('garment-detail-edit');
 
     const nameInput = await screen.findByTestId('garment-form-name');
     expect(nameInput.props.value).toBe('Camisa vaquera');
@@ -97,7 +120,7 @@ describe('editing an existing garment', () => {
   it('saves a new name and shows it in the list', async () => {
     await renderWardrobe();
     await openDetail('Camisa vaquera');
-    await fireEvent.press(screen.getByTestId('garment-detail-edit'));
+    await pressDetailAction('garment-detail-edit');
     await screen.findByTestId('garment-form-name');
 
     await fireEvent.changeText(screen.getByTestId('garment-form-name'), 'Camisa azul');
@@ -110,7 +133,7 @@ describe('editing an existing garment', () => {
   it('persists the edit to AsyncStorage', async () => {
     await renderWardrobe();
     await openDetail('Camisa vaquera');
-    await fireEvent.press(screen.getByTestId('garment-detail-edit'));
+    await pressDetailAction('garment-detail-edit');
     await screen.findByTestId('garment-form-name');
 
     await fireEvent.changeText(screen.getByTestId('garment-form-name'), 'Camisa azul');
@@ -126,7 +149,7 @@ describe('editing an existing garment', () => {
   it('adds a tag to an existing garment and exposes it as a filter', async () => {
     await renderWardrobe();
     await openDetail('Bufanda');
-    await fireEvent.press(screen.getByTestId('garment-detail-edit'));
+    await pressDetailAction('garment-detail-edit');
     await screen.findByTestId('garment-form-tag-input');
 
     await fireEvent.changeText(screen.getByTestId('garment-form-tag-input'), 'lana');
@@ -143,7 +166,7 @@ describe('editing an existing garment', () => {
   it('closes the edit form without saving when cancelled', async () => {
     await renderWardrobe();
     await openDetail('Camisa vaquera');
-    await fireEvent.press(screen.getByTestId('garment-detail-edit'));
+    await pressDetailAction('garment-detail-edit');
     await screen.findByTestId('garment-form-name');
 
     await fireEvent.changeText(screen.getByTestId('garment-form-name'), 'Nombre descartado');
@@ -160,7 +183,7 @@ describe('deleting a garment', () => {
     await renderWardrobe();
     await openDetail('Camisa vaquera');
 
-    await fireEvent.press(screen.getByTestId('garment-detail-delete'));
+    await pressDetailAction('garment-detail-delete');
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Eliminar prenda',
@@ -182,13 +205,13 @@ describe('deleting a garment', () => {
     await renderWardrobe();
     await openDetail('Camisa vaquera');
 
-    await fireEvent.press(screen.getByTestId('garment-detail-delete'));
+    await pressDetailAction('garment-detail-delete');
     const buttons = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2];
     buttons?.find((button) => button.style === 'cancel')?.onPress?.();
 
     // The name shows both on the card and in the still-open detail modal.
     expect(screen.getAllByText('Camisa vaquera').length).toBeGreaterThan(0);
-    expect(screen.getByTestId('garment-detail-delete')).toBeOnTheScreen();
+    expect(screen.getByTestId('garment-detail-menu-button')).toBeOnTheScreen();
   });
 });
 
@@ -209,6 +232,22 @@ describe('the outfits a garment appears in', () => {
     await AsyncStorage.setItem('wardrobe-outfits', JSON.stringify(OUTFITS));
     await renderWardrobe();
   }
+
+  it('takes you to the outfits tab when one is tapped', async () => {
+    await renderWithOutfits();
+    await openDetail('Camisa vaquera');
+
+    await fireEvent.press(await screen.findByTestId('garment-detail-outfit-o2'));
+
+    expect(router.navigate).toHaveBeenCalledWith({
+      pathname: '/outfits',
+      params: { outfit: 'o2' },
+    });
+    // The detail closes on the way out, so coming back does not land on it.
+    await waitFor(() =>
+      expect(screen.queryByTestId('garment-detail-menu-button')).not.toBeOnTheScreen(),
+    );
+  });
 
   it('lists them in the detail view', async () => {
     await renderWithOutfits();
@@ -236,7 +275,7 @@ describe('the outfits a garment appears in', () => {
     await renderWithOutfits();
     await openDetail('Camisa vaquera');
 
-    await fireEvent.press(screen.getByTestId('garment-detail-delete'));
+    await pressDetailAction('garment-detail-delete');
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Eliminar prenda',
@@ -249,7 +288,7 @@ describe('the outfits a garment appears in', () => {
     await renderWithOutfits();
     await openDetail('Bufanda');
 
-    await fireEvent.press(screen.getByTestId('garment-detail-delete'));
+    await pressDetailAction('garment-detail-delete');
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Eliminar prenda',
@@ -262,7 +301,7 @@ describe('the outfits a garment appears in', () => {
     await renderWardrobe();
     await openDetail('Camisa vaquera');
 
-    await fireEvent.press(screen.getByTestId('garment-detail-delete'));
+    await pressDetailAction('garment-detail-delete');
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Eliminar prenda',
