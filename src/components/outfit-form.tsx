@@ -1,18 +1,9 @@
 import { useState } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Alert, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { Button } from './button';
 import { GarmentPicker } from './garment-picker';
+import { KeyboardAwareScrollView } from './keyboard-aware-scroll-view';
 import { TagPicker } from './tag-picker';
 import { ThemedText } from './themed-text';
 
@@ -141,69 +132,62 @@ export function OutfitForm({
   );
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <ThemedText type="title" style={styles.title}>
-              {title}
+    <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <ThemedText type="title" style={styles.title}>
+            {title}
+          </ThemedText>
+          {subtitle && (
+            <ThemedText type="small" themeColor="textSecondary">
+              {subtitle}
             </ThemedText>
-            {subtitle && (
-              <ThemedText type="small" themeColor="textSecondary">
-                {subtitle}
-              </ThemedText>
-            )}
-          </View>
-
-          {onCancel && (
-            <Pressable
-              testID="outfit-form-cancel"
-              onPress={onCancel}
-              hitSlop={12}
-              style={({ pressed }) => pressed && styles.pressed}>
-              <View style={[styles.closeButton, { backgroundColor: theme.backgroundSelected }]}>
-                <ThemedText type="smallBold">✕</ThemedText>
-              </View>
-            </Pressable>
           )}
         </View>
 
-        {isLandscape ? (
-          <View style={styles.landscapeRow}>
-            <View style={styles.landscapeColumn}>{fieldsSection}</View>
-            <View style={styles.landscapeColumn}>{garmentsSection}</View>
-          </View>
-        ) : (
-          <>
-            {fieldsSection}
-            {garmentsSection}
-          </>
+        {onCancel && (
+          <Pressable
+            testID="outfit-form-cancel"
+            onPress={onCancel}
+            hitSlop={12}
+            style={({ pressed }) => pressed && styles.pressed}>
+            <View style={[styles.closeButton, { backgroundColor: theme.backgroundSelected }]}>
+              <ThemedText type="smallBold">✕</ThemedText>
+            </View>
+          </Pressable>
         )}
+      </View>
 
-        {name.trim().length > 0 && garmentIds.length === 0 && (
-          <ThemedText type="small" themeColor="textSecondary" testID="outfit-form-hint">
-            Selecciona al menos una prenda para guardar el outfit.
-          </ThemedText>
-        )}
+      {isLandscape ? (
+        <View style={styles.landscapeRow}>
+          <View style={styles.landscapeColumn}>{fieldsSection}</View>
+          <View style={styles.landscapeColumn}>{garmentsSection}</View>
+        </View>
+      ) : (
+        <>
+          {fieldsSection}
+          {garmentsSection}
+        </>
+      )}
 
-        <Button
-          testID="outfit-form-submit"
-          label={isSaving ? savingLabel : submitLabel}
-          onPress={handleSave}
-          disabled={!canSave}
-          style={styles.submit}
-        />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {name.trim().length > 0 && garmentIds.length === 0 && (
+        <ThemedText type="small" themeColor="textSecondary" testID="outfit-form-hint">
+          Selecciona al menos una prenda para guardar el outfit.
+        </ThemedText>
+      )}
+
+      <Button
+        testID="outfit-form-submit"
+        label={isSaving ? savingLabel : submitLabel}
+        onPress={handleSave}
+        disabled={!canSave}
+        style={styles.submit}
+      />
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   scrollContent: {
     padding: Spacing.four,
     paddingBottom: BottomTabInset + Spacing.four,

@@ -18,13 +18,14 @@ server, no account, no internet connection required.
 - **Optional description**, a free-form notes field shown only on the detail screen.
 - **Search by name**, case-insensitive.
 - **Tags with colours and groups.** Every tag can be given a colour and filed under a group of your
-  own naming — "estación", "tipo", "ocasión" — and the filter row lays the chips out group by group.
-  The manager lives behind the **⋯ menu** at the top right, since it is set up once in a while
-  rather than every day.
+  own naming — "estación", "tipo", "ocasión". The manager lives behind the **⋯ menu** at the top
+  right, since it is set up once in a while rather than every day.
 - **Tag autocomplete**: typing a letter or two suggests the tags already in use, so long names never
   have to be retyped.
 - **Filter by tags**, combinable: selecting several tags shows only the garments that carry **all**
-  of them.
+  of them. The chips live behind the **funnel button** next to the search field, in a sheet that
+  lays them out group by group; the button carries a badge with how many filters are active, so a
+  wardrobe with dozens of tags never pushes the grid off the screen.
 - **Wardrobes**: file your clothes into named collections — «invierno», «casa del pueblo» — and
   switch between them by tapping the screen title. A garment belongs to at most one wardrobe and
   moves between them from its edit form; garments you have not filed live under «Sin armario».
@@ -41,6 +42,8 @@ server, no account, no internet connection required.
   its column count to the available width.
 - **Light and dark mode**: follows the system setting until you touch the **dark mode switch** in
   the ⋯ menu, from which point your choice is pinned and remembered between launches.
+- **The keyboard never covers the field you are typing in**: the forms shorten themselves by the
+  height of the keyboard and scroll the focused field back into view.
 - **Persistent local storage**: the garment list lives in AsyncStorage and photos are copied into
   the app's private storage, so they survive even if you delete the original from your gallery.
 
@@ -283,6 +286,8 @@ armario-app/
 │   │   ├── name-prompt-modal.tsx  # One-field dialog, used to create and rename
 │   │   ├── tag-picker.tsx      # Tag input with autocomplete, shared by both forms
 │   │   ├── tag-filter.tsx      # Grouped filter chips, shared by both lists
+│   │   ├── tag-filter-button.tsx  # Funnel button opening those chips in a sheet
+│   │   ├── keyboard-aware-scroll-view.tsx  # Scrolling form that dodges the keyboard
 │   │   ├── search-bar.tsx      # Search field, shared by both lists
 │   │   ├── empty-state.tsx     # "Nothing here yet" card
 │   │   ├── filter-summary.tsx  # Result count and "clear filters"
@@ -302,7 +307,7 @@ armario-app/
 │   │   ├── use-persistent-state.ts  # State backed by AsyncStorage
 │   │   └── id.ts
 │   ├── constants/theme.ts      # Colors, spacing, radii, tag palette
-│   ├── hooks/                  # Theme and grid-layout hooks
+│   ├── hooks/                  # Theme, grid-layout and keyboard-inset hooks
 │   ├── types/                  # Garment, Outfit, Tag and Wardrobe shapes, plus the migration
 │   └── __tests__/              # Regression tests
 ├── plugins/
@@ -358,6 +363,17 @@ armario-app/
   lies about what you are looking at.
 - **The tab bar sets `tintColor` as well as `indicatorColor`.** The indicator is a pill drawn behind
   the selected icon; leaving it the same colour as the bar made that icon invisible.
+- **The tag filter is a button, not a row.** Chips laid out under the search field cost header space
+  in proportion to how many tags exist, which is exactly backwards: the more clothes you own, the
+  less of them you can see. Behind a button the cost is fixed, and the sheet has the room to keep
+  the chips grouped by category.
+- **Keyboard insets are handled by the app, not by Android.** `windowSoftInputMode="adjustResize"`
+  stopped resizing the window when Android went edge-to-edge, and `KeyboardAvoidingView` has never
+  done anything there, so a focused field simply ended up behind the keyboard. `useKeyboardInset`
+  reads the height out of React Native's keyboard events and adds back the navigation bar the
+  keyboard is drawn over; `KeyboardAwareScrollView` turns that into a spacer under the scroll view
+  and scrolls the focused field into what is left. Moving between fields afterwards needs no help —
+  a shorter scroll view brings its focused child into view on its own.
 
 ---
 

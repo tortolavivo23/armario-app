@@ -10,7 +10,7 @@ import { OutfitCard } from '@/components/outfit-card';
 import { OutfitDetailModal } from '@/components/outfit-detail-modal';
 import { OutfitEditorModal } from '@/components/outfit-editor-modal';
 import { SearchBar } from '@/components/search-bar';
-import { TagFilter } from '@/components/tag-filter';
+import { TagFilterButton } from '@/components/tag-filter-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Accent, BottomTabInset, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
@@ -99,8 +99,28 @@ export default function OutfitsScreen() {
     </View>
   );
 
-  const searchBar = (
-    <SearchBar testID="outfits-search" value={query} onChangeText={setQuery} compact={isLandscape} />
+  const searchRow = (
+    <View style={styles.searchRow}>
+      <View style={styles.searchFlex}>
+        <SearchBar
+          testID="outfits-search"
+          value={query}
+          onChangeText={setQuery}
+          compact={isLandscape}
+        />
+      </View>
+
+      {allTags.length > 0 && (
+        <TagFilterButton
+          testID="outfits-tag-filter"
+          tags={allTags}
+          selected={selectedTags}
+          onToggle={toggleTag}
+          onClear={() => setSelectedTags([])}
+          compact={isLandscape}
+        />
+      )}
+    </View>
   );
 
   const listHeader = (
@@ -108,36 +128,23 @@ export default function OutfitsScreen() {
       {isLandscape && outfits.length > 0 ? (
         <View style={styles.titleSearchRow}>
           {titleBlock}
-          <View style={styles.searchFlex}>{searchBar}</View>
+          <View style={styles.searchFlex}>{searchRow}</View>
         </View>
       ) : (
         <>
           {titleBlock}
-          {outfits.length > 0 && searchBar}
+          {outfits.length > 0 && searchRow}
         </>
       )}
 
-      {outfits.length > 0 && (
-        <>
-          {allTags.length > 0 && (
-            <TagFilter
-              testID="outfits-tag-filter"
-              tags={allTags}
-              selected={selectedTags}
-              onToggle={toggleTag}
-            />
-          )}
-
-          {hasFilters && (
-            <FilterSummary
-              testID="outfits-clear-filters"
-              count={filteredOutfits.length}
-              singular="outfit encontrado"
-              plural="outfits encontrados"
-              onClear={clearFilters}
-            />
-          )}
-        </>
+      {outfits.length > 0 && hasFilters && (
+        <FilterSummary
+          testID="outfits-clear-filters"
+          count={filteredOutfits.length}
+          singular="outfit encontrado"
+          plural="outfits encontrados"
+          onClear={clearFilters}
+        />
       )}
 
       {isEmpty && (
@@ -261,6 +268,11 @@ const styles = StyleSheet.create({
   },
   searchFlex: {
     flex: 1,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   titleRow: {
     flexDirection: 'row',

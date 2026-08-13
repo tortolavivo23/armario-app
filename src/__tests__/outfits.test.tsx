@@ -285,9 +285,10 @@ describe('outfits screen', () => {
     await renderScreen();
     await screen.findByText('Domingo de terraza');
 
-    const filter = screen.getByTestId('outfits-tag-filter');
-    expect(within(filter).getByText('ESTACIÓN')).toBeOnTheScreen();
-    await fireEvent.press(within(filter).getByText('trabajo'));
+    await fireEvent.press(screen.getByTestId('outfits-tag-filter-button'));
+    const filter = within(await screen.findByTestId('outfits-tag-filter'));
+    expect(filter.getByText('ESTACIÓN')).toBeOnTheScreen();
+    await fireEvent.press(filter.getByText('trabajo'));
 
     await waitFor(() => expect(screen.queryByText('Domingo de terraza')).not.toBeOnTheScreen());
     expect(screen.getByText('Reunión de oficina')).toBeOnTheScreen();

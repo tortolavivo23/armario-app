@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
 import WardrobeScreen from '@/app/index';
@@ -132,10 +132,11 @@ describe('editing an existing garment', () => {
     await fireEvent(screen.getByTestId('garment-form-tag-input'), 'submitEditing');
     await fireEvent.press(screen.getByTestId('garment-form-submit'));
 
-    await waitFor(() => expect(screen.getByTestId('wardrobe-tag-filter')).toBeOnTheScreen());
-    const filterRow = screen.getByTestId('wardrobe-tag-filter');
-    await waitFor(() => expect(filterRow).toBeOnTheScreen());
-    expect(screen.getAllByText('lana').length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getByTestId('wardrobe-tag-filter-button')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-button'));
+
+    const sheet = within(await screen.findByTestId('wardrobe-tag-filter'));
+    expect(sheet.getByText('lana')).toBeOnTheScreen();
   });
 
   it('closes the edit form without saving when cancelled', async () => {

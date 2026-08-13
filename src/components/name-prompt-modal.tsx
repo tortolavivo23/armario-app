@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { Modal, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from './button';
 import { ThemedText } from './themed-text';
 
 import { CardShadow, Radius, Spacing } from '@/constants/theme';
+import { useKeyboardInset } from '@/hooks/use-keyboard-inset';
 import { useTheme } from '@/hooks/use-theme';
 
 type NamePromptModalProps = {
@@ -31,6 +32,9 @@ export function NamePromptModal({
   testID = 'name-prompt',
 }: NamePromptModalProps) {
   const theme = useTheme();
+  // The field is autofocused, so the dialog opens with the keyboard already up;
+  // centring it in what is left keeps the buttons reachable.
+  const keyboardInset = useKeyboardInset();
   const [name, setName] = useState(initialValue);
 
   // Reopening, or reopening for a different wardrobe, has to start from that
@@ -50,9 +54,7 @@ export function NamePromptModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.backdrop}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={[styles.backdrop, { paddingBottom: keyboardInset + Spacing.four }]}>
         <View
           testID={testID}
           style={[
@@ -96,7 +98,7 @@ export function NamePromptModal({
             />
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
