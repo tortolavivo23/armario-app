@@ -305,7 +305,7 @@ describe('garment description', () => {
     );
 
     await fireEvent.press(await screen.findByText('Camisa vaquera'));
-    await screen.findByTestId('garment-detail-edit');
+    await screen.findByTestId('garment-detail-menu-button');
 
     expect(screen.queryByTestId('garment-detail-description')).not.toBeOnTheScreen();
   });
