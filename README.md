@@ -147,6 +147,13 @@ Two GitHub Actions workflows live in [`.github/workflows`](.github/workflows):
 `release.yml` calls `ci.yml` as a reusable workflow rather than duplicating the
 steps, so an APK can never be produced from a commit whose tests failed.
 
+The APK is built for `arm64-v8a` only. Almost the whole workflow is that one
+Gradle step, and almost all of that is compiling native code once per
+architecture — see [Pick the architecture you are actually going to
+run](#pick-the-architecture-you-are-actually-going-to-run) below. The published
+APK is meant for a phone, and every Android phone released since about 2015 is
+arm64.
+
 ### Releases
 
 The APK is always attached to the workflow run as an artifact named
@@ -184,13 +191,48 @@ Produces a standalone APK that runs without a computer or dev server:
 ```bash
 npx expo prebuild --platform android
 cd android
-./gradlew assembleRelease
+./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 ```
 
 The APK is written to `android/app/build/outputs/apk/release/app-release.apk`.
 
 To install it on a phone: copy it to the device, open it from the file manager and allow
 installation from unknown sources when Android asks.
+
+### Pick the architecture you are actually going to run
+
+`reactNativeArchitectures` decides which CPU architectures the native code is compiled for, and it
+is the single biggest lever on build time: the default builds all four, which means compiling the
+native side of six libraries four times over. Measured on a clean build, dropping to one takes it
+from **10m 27s to 4m 29s**, and the APK from **104 MB to 45 MB**.
+
+| Where you are going to install it | Flag |
+| --- | --- |
+| A phone (anything since about 2015) | `-PreactNativeArchitectures=arm64-v8a` |
+| An Android emulator | `-PreactNativeArchitectures=x86_64` |
+| Both, or you are not sure | `-PreactNativeArchitectures=arm64-v8a,x86_64` |
+
+> **Build for the architecture you are installing on.** An emulator whose image advertises arm64
+> translation — the Pixel 9 API 35 image reports `ro.product.cpu.abilist=x86_64,arm64-v8a` — will
+> happily *install* an `arm64-v8a`-only APK and then crash on launch with
+> `SoLoaderDSONotFoundError: couldn't find DSO to load: libreactnative.so`. The translation layer is
+> enough to satisfy the installer, not to load React Native's native libraries. On an image without
+> it you get the honest `INSTALL_FAILED_NO_MATCHING_ABIS` instead.
+>
+> Adding the architecture you need is cheaper than it looks: Gradle keeps each one's output
+> separately, so going back to one you have built before only rebuilds the packaging.
+
+### Iterating on JavaScript without rebuilding
+
+A release build is the wrong tool for trying out a change. Install a dev build once and Metro
+reloads the JavaScript as you save, which turns minutes into a second:
+
+```bash
+npx expo run:android   # once, installs the dev build
+npx expo start         # from then on, hot reload
+```
+
+Keep the release build for checking the real APK before publishing.
 
 > Use **`assembleRelease`**, not `assembleDebug`. The debug APK tries to reach the Metro dev server
 > on your computer at launch and shows a black screen without it; the release APK bundles the
