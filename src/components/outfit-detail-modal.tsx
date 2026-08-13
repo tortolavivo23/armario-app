@@ -1,7 +1,7 @@
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from './button';
+import { OverflowMenu } from './overflow-menu';
 import { GarmentImage } from './garment-image';
 import { TagChip } from './tag-chip';
 import { ThemedText } from './themed-text';
@@ -66,6 +66,25 @@ export function OutfitDetailModal({
                   <ThemedText type="subtitle" style={styles.title}>
                     {outfit.name}
                   </ThemedText>
+
+                  <OverflowMenu
+                    testID="outfit-detail-menu"
+                    items={[
+                      {
+                        label: 'Editar outfit',
+                        icon: '✏️',
+                        testID: 'outfit-detail-edit',
+                        onPress: () => onEdit(outfit.id),
+                      },
+                      {
+                        label: 'Eliminar outfit',
+                        icon: '🗑',
+                        testID: 'outfit-detail-delete',
+                        danger: true,
+                        onPress: () => confirmDelete(outfit),
+                      },
+                    ]}
+                  />
 
                   <Pressable testID="outfit-detail-close" onPress={onClose} hitSlop={12}>
                     <View style={[styles.closeButton, { backgroundColor: theme.backgroundSelected }]}>
@@ -149,20 +168,6 @@ export function OutfitDetailModal({
                   <ThemedText themeColor="textSecondary">Este outfit no tiene etiquetas.</ThemedText>
                 )}
               </ScrollView>
-
-              <View style={styles.actions}>
-                <Button
-                  testID="outfit-detail-edit"
-                  label="Editar outfit"
-                  onPress={() => onEdit(outfit.id)}
-                />
-                <Button
-                  testID="outfit-detail-delete"
-                  label="Eliminar outfit"
-                  variant="danger"
-                  onPress={() => confirmDelete(outfit)}
-                />
-              </View>
             </>
           )}
         </SafeAreaView>
@@ -241,10 +246,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
-  },
-  actions: {
-    gap: Spacing.two,
-    padding: Spacing.four,
-    paddingTop: Spacing.three,
   },
 });

@@ -18,8 +18,10 @@ jest.mock('expo-image', () => {
 });
 
 jest.mock('expo-router', () => ({
-  router: { navigate: jest.fn(), push: jest.fn(), back: jest.fn() },
+  router: { navigate: jest.fn(), push: jest.fn(), back: jest.fn(), setParams: jest.fn() },
   useFocusEffect: jest.fn(),
+  // Overridden per test when a screen is opened with parameters.
+  useLocalSearchParams: jest.fn(() => ({})),
 }));
 
 // The wardrobe context copies picked images into app storage; tests stub that filesystem work out.

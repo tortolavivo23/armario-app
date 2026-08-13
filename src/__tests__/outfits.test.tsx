@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { Alert } from 'react-native';
 
 import OutfitsScreen from '@/app/outfits';
@@ -71,6 +72,13 @@ async function seed({ outfits = OUTFITS, garments = GARMENTS, tags = TAGS } = {}
   await AsyncStorage.setItem('wardrobe-tags', JSON.stringify(tags));
 }
 
+/** Edit and delete live behind the ⋯ menu of the detail view. */
+async function pressDetailAction(action: string) {
+  const prefix = action.startsWith('outfit') ? 'outfit-detail' : 'garment-detail';
+  await fireEvent.press(screen.getByTestId(`${prefix}-menu-button`));
+  await fireEvent.press(await screen.findByTestId(action));
+}
+
 async function renderScreen() {
   await render(
     <AppProviders>
@@ -89,7 +97,7 @@ async function renderContext() {
 /** Opens the detail modal of an outfit by tapping its card. */
 async function openDetail(name: string) {
   await fireEvent.press(screen.getByText(name));
-  await screen.findByTestId('outfit-detail-edit');
+  await screen.findByTestId('outfit-detail-menu-button');
 }
 
 beforeEach(async () => {
@@ -317,6 +325,35 @@ describe('outfits screen', () => {
   });
 });
 
+describe('arriving from a garment', () => {
+  afterEach(() => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({});
+  });
+
+  it('opens the outfit named in the route parameters', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ outfit: 'o2' });
+    await seed();
+    await renderScreen();
+
+    expect(await screen.findByTestId('outfit-detail-menu-button')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('outfit-detail')).getByText('Reunión de oficina')).toBeOnTheScreen();
+  });
+
+  it('swaps to another outfit tapped inside a garment, without leaving the tab', async () => {
+    await seed();
+    await renderScreen();
+    await openDetail('Domingo de terraza');
+    await fireEvent.press(screen.getByTestId('outfit-detail-garment-a'));
+    await screen.findByTestId('garment-detail-menu-button');
+
+    await fireEvent.press(screen.getByTestId('garment-detail-outfit-o2'));
+
+    await waitFor(() =>
+      expect(within(screen.getByTestId('outfit-detail')).getByText('Reunión de oficina')).toBeOnTheScreen(),
+    );
+  });
+});
+
 describe('outfit detail', () => {
   it('shows the description, the garments and the tags', async () => {
     await seed();
@@ -347,7 +384,7 @@ describe('outfit detail', () => {
 
     await fireEvent.press(screen.getByTestId('outfit-detail-garment-a'));
 
-    expect(await screen.findByTestId('garment-detail-edit')).toBeOnTheScreen();
+    expect(await screen.findByTestId('garment-detail-menu-button')).toBeOnTheScreen();
   });
 
   it('asks for confirmation before deleting and keeps the garments', async () => {
@@ -355,7 +392,7 @@ describe('outfit detail', () => {
     await renderScreen();
     await openDetail('Domingo de terraza');
 
-    await fireEvent.press(screen.getByTestId('outfit-detail-delete'));
+    await pressDetailAction('outfit-detail-delete');
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Eliminar outfit',
@@ -474,7 +511,7 @@ describe('editing an outfit', () => {
     await renderScreen();
     await openDetail('Domingo de terraza');
 
-    await fireEvent.press(screen.getByTestId('outfit-detail-edit'));
+    await pressDetailAction('outfit-detail-edit');
 
     expect(await screen.findByTestId('outfit-form-name')).toHaveProp(
       'value',
@@ -487,7 +524,7 @@ describe('editing an outfit', () => {
     await seed();
     await renderScreen();
     await openDetail('Domingo de terraza');
-    await fireEvent.press(screen.getByTestId('outfit-detail-edit'));
+    await pressDetailAction('outfit-detail-edit');
     await screen.findByTestId('outfit-form-name');
 
     await fireEvent.changeText(screen.getByTestId('outfit-form-name'), 'Domingo de playa');
@@ -507,7 +544,7 @@ describe('editing an outfit', () => {
     await seed();
     await renderScreen();
     await openDetail('Domingo de terraza');
-    await fireEvent.press(screen.getByTestId('outfit-detail-edit'));
+    await pressDetailAction('outfit-detail-edit');
     await screen.findByTestId('outfit-form-name');
 
     await fireEvent.changeText(screen.getByTestId('outfit-form-name'), 'Nombre descartado');
