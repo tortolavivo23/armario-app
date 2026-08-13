@@ -379,5 +379,4 @@ armario-app/
 
 ## License
 
-None. This is a personal project published without a license, which means all rights are reserved:
-the code can be read here, but it is not licensed for reuse, modification or redistribution.
+[MIT](LICENSE). Use it, change it, ship it — just keep the copyright notice.
