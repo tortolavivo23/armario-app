@@ -1,18 +1,9 @@
 import { useState } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Alert, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { Button } from './button';
 import { GarmentImagesField } from './garment-images-field';
+import { KeyboardAwareScrollView } from './keyboard-aware-scroll-view';
 import { TagPicker } from './tag-picker';
 import { WardrobePicker } from './wardrobe-picker';
 import { ThemedText } from './themed-text';
@@ -157,63 +148,56 @@ export function GarmentForm({
   );
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <ThemedText type="title" style={styles.title}>
-              {title}
+    <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <ThemedText type="title" style={styles.title}>
+            {title}
+          </ThemedText>
+          {subtitle && (
+            <ThemedText type="small" themeColor="textSecondary">
+              {subtitle}
             </ThemedText>
-            {subtitle && (
-              <ThemedText type="small" themeColor="textSecondary">
-                {subtitle}
-              </ThemedText>
-            )}
-          </View>
-
-          {onCancel && (
-            <Pressable
-              testID="garment-form-cancel"
-              onPress={onCancel}
-              hitSlop={12}
-              style={({ pressed }) => pressed && styles.pressed}>
-              <View style={[styles.closeButton, { backgroundColor: theme.backgroundSelected }]}>
-                <ThemedText type="smallBold">✕</ThemedText>
-              </View>
-            </Pressable>
           )}
         </View>
 
-        {isLandscape ? (
-          <View style={styles.landscapeRow}>
-            <View style={styles.landscapeColumn}>{imageSection}</View>
-            <View style={styles.landscapeColumn}>{fieldsSection}</View>
-          </View>
-        ) : (
-          <>
-            {imageSection}
-            {fieldsSection}
-          </>
+        {onCancel && (
+          <Pressable
+            testID="garment-form-cancel"
+            onPress={onCancel}
+            hitSlop={12}
+            style={({ pressed }) => pressed && styles.pressed}>
+            <View style={[styles.closeButton, { backgroundColor: theme.backgroundSelected }]}>
+              <ThemedText type="smallBold">✕</ThemedText>
+            </View>
+          </Pressable>
         )}
+      </View>
 
-        <Button
-          testID="garment-form-submit"
-          label={isSaving ? savingLabel : submitLabel}
-          onPress={handleSave}
-          disabled={!canSave}
-          style={styles.submit}
-        />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {isLandscape ? (
+        <View style={styles.landscapeRow}>
+          <View style={styles.landscapeColumn}>{imageSection}</View>
+          <View style={styles.landscapeColumn}>{fieldsSection}</View>
+        </View>
+      ) : (
+        <>
+          {imageSection}
+          {fieldsSection}
+        </>
+      )}
+
+      <Button
+        testID="garment-form-submit"
+        label={isSaving ? savingLabel : submitLabel}
+        onPress={handleSave}
+        disabled={!canSave}
+        style={styles.submit}
+      />
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   scrollContent: {
     padding: Spacing.four,
     paddingBottom: BottomTabInset + Spacing.four,
@@ -259,11 +243,11 @@ const styles = StyleSheet.create({
   label: {
     letterSpacing: 0.6,
     fontSize: 12,
-  },
+  },
   textArea: {
     minHeight: 120,
     paddingTop: Spacing.three - 2,
-  },
+  },
   input: {
     fontSize: 16,
     paddingVertical: Spacing.three - 2,

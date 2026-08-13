@@ -9,7 +9,7 @@ import { GarmentDetailModal } from '@/components/garment-detail-modal';
 import { GarmentEditModal } from '@/components/garment-edit-modal';
 import { OverflowMenu } from '@/components/overflow-menu';
 import { SearchBar } from '@/components/search-bar';
-import { TagFilter } from '@/components/tag-filter';
+import { TagFilterButton } from '@/components/tag-filter-button';
 import { TagsManagerModal } from '@/components/tags-manager-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -117,8 +117,30 @@ export default function WardrobeScreen() {
     </View>
   );
 
-  const searchBar = (
-    <SearchBar testID="wardrobe-search" value={query} onChangeText={setQuery} compact={isLandscape} />
+  // The tag filter lives behind a button so a long tag list cannot push the
+  // grid off the screen.
+  const searchRow = (
+    <View style={styles.searchRow}>
+      <View style={styles.searchFlex}>
+        <SearchBar
+          testID="wardrobe-search"
+          value={query}
+          onChangeText={setQuery}
+          compact={isLandscape}
+        />
+      </View>
+
+      {allTags.length > 0 && (
+        <TagFilterButton
+          testID="wardrobe-tag-filter"
+          tags={allTags}
+          selected={selectedTags}
+          onToggle={toggleTag}
+          onClear={() => setSelectedTags([])}
+          compact={isLandscape}
+        />
+      )}
+    </View>
   );
 
   const listHeader = (
@@ -127,36 +149,23 @@ export default function WardrobeScreen() {
       {isLandscape && garments.length > 0 ? (
         <View style={styles.titleSearchRow}>
           {titleBlock}
-          <View style={styles.searchFlex}>{searchBar}</View>
+          <View style={styles.searchFlex}>{searchRow}</View>
         </View>
       ) : (
         <>
           {titleBlock}
-          {garments.length > 0 && searchBar}
+          {garments.length > 0 && searchRow}
         </>
       )}
 
-      {wardrobeGarments.length > 0 && (
-        <>
-          {allTags.length > 0 && (
-            <TagFilter
-              testID="wardrobe-tag-filter"
-              tags={allTags}
-              selected={selectedTags}
-              onToggle={toggleTag}
-            />
-          )}
-
-          {hasFilters && (
-            <FilterSummary
-              testID="wardrobe-clear-filters"
-              count={filteredGarments.length}
-              singular="prenda encontrada"
-              plural="prendas encontradas"
-              onClear={clearFilters}
-            />
-          )}
-        </>
+      {wardrobeGarments.length > 0 && hasFilters && (
+        <FilterSummary
+          testID="wardrobe-clear-filters"
+          count={filteredGarments.length}
+          singular="prenda encontrada"
+          plural="prendas encontradas"
+          onClear={clearFilters}
+        />
       )}
 
       {isEmpty && (
@@ -264,6 +273,11 @@ const styles = StyleSheet.create({
   },
   searchFlex: {
     flex: 1,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   titleRow: {
     flexDirection: 'row',

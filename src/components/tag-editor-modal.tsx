@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from './button';
+import { KeyboardAwareScrollView } from './keyboard-aware-scroll-view';
 import { TagChip } from './tag-chip';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
@@ -39,7 +40,7 @@ export function TagEditorModal({
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
           {tag && (
-            <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <KeyboardAwareScrollView contentContainerStyle={styles.content}>
               <View style={styles.header}>
                 <ThemedText type="subtitle" style={styles.title}>
                   {tag.name}
@@ -147,7 +148,7 @@ export function TagEditorModal({
                   La etiqueta seguirá en las prendas que la usan; solo se olvida su color y su grupo.
                 </ThemedText>
               </View>
-            </ScrollView>
+            </KeyboardAwareScrollView>
           )}
         </SafeAreaView>
       </ThemedView>

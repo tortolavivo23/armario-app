@@ -43,10 +43,17 @@ function renderScreen() {
   );
 }
 
-/** Presses a chip inside the tag filter row (tag names also appear on the cards). */
+/** Opens the tag filter sheet and returns queries scoped to its chips. */
+async function openTagFilter() {
+  await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-button'));
+  return within(await screen.findByTestId('wardrobe-tag-filter'));
+}
+
+/** Opens the sheet, presses a chip and dismisses it, as a user would. */
 async function pressTagFilter(tag: string) {
-  const filterRow = screen.getByTestId('wardrobe-tag-filter');
-  await fireEvent.press(within(filterRow).getByText(tag));
+  const sheet = await openTagFilter();
+  await fireEvent.press(sheet.getByText(tag));
+  await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-close'));
 }
 
 beforeEach(async () => {
@@ -90,14 +97,42 @@ describe('WardrobeScreen', () => {
     await renderScreen();
     await screen.findByText('Camisa vaquera');
 
-    const filterRow = screen.getByTestId('wardrobe-tag-filter');
+    const sheet = await openTagFilter();
 
-    expect(within(filterRow).getByText('casual')).toBeOnTheScreen();
-    expect(within(filterRow).getByText('invierno')).toBeOnTheScreen();
-    expect(within(filterRow).getByText('verano')).toBeOnTheScreen();
+    expect(sheet.getByText('casual')).toBeOnTheScreen();
+    expect(sheet.getByText('invierno')).toBeOnTheScreen();
+    expect(sheet.getByText('verano')).toBeOnTheScreen();
     // 'casual' and 'verano' appear on two garments each but only once as a filter.
-    expect(within(filterRow).getAllByText('casual')).toHaveLength(1);
-    expect(within(filterRow).getAllByText('verano')).toHaveLength(1);
+    expect(sheet.getAllByText('casual')).toHaveLength(1);
+    expect(sheet.getAllByText('verano')).toHaveLength(1);
+  });
+
+  it('keeps the chips out of the header until the filter button is pressed', async () => {
+    await renderScreen();
+    await screen.findByText('Camisa vaquera');
+
+    expect(screen.getByTestId('wardrobe-tag-filter-button')).toBeOnTheScreen();
+    expect(screen.queryByTestId('wardrobe-tag-filter')).not.toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-button'));
+
+    expect(await screen.findByTestId('wardrobe-tag-filter')).toBeOnTheScreen();
+  });
+
+  it('counts the active filters on the button and drops them from the sheet', async () => {
+    await renderScreen();
+    await screen.findByText('Camisa vaquera');
+
+    await pressTagFilter('verano');
+    await pressTagFilter('casual');
+
+    expect(within(screen.getByTestId('wardrobe-tag-filter-button')).getByText('2')).toBeOnTheScreen();
+
+    await openTagFilter();
+    await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-clear'));
+
+    await waitFor(() => expect(screen.getByText('Camisa vaquera')).toBeOnTheScreen());
+    expect(within(screen.getByTestId('wardrobe-tag-filter-button')).queryByText('2')).toBeNull();
   });
 
   it('filters garments by a selected tag', async () => {
@@ -171,6 +206,6 @@ describe('WardrobeScreen with no garments', () => {
 
     expect(await screen.findByText('Todavía no hay prendas')).toBeOnTheScreen();
     expect(screen.queryByTestId('wardrobe-search')).not.toBeOnTheScreen();
-    expect(screen.queryByTestId('wardrobe-tag-filter')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('wardrobe-tag-filter-button')).not.toBeOnTheScreen();
   });
 });

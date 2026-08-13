@@ -322,14 +322,20 @@ describe('tag manager', () => {
 });
 
 describe('tag filter grouping on the wardrobe screen', () => {
+  /** The chips live in a sheet now, so every test here opens it first. */
+  async function openTagFilter() {
+    await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-button'));
+    return within(await screen.findByTestId('wardrobe-tag-filter'));
+  }
+
   it('shows a heading per group', async () => {
     await seed();
     await renderWardrobe();
 
-    const filter = screen.getByTestId('wardrobe-tag-filter');
-    expect(within(filter).getByText('ESTACIÓN')).toBeOnTheScreen();
-    expect(within(filter).getByText('TIPO')).toBeOnTheScreen();
-    expect(within(filter).getByText('OTRAS')).toBeOnTheScreen();
+    const filter = await openTagFilter();
+    expect(filter.getByText('ESTACIÓN')).toBeOnTheScreen();
+    expect(filter.getByText('TIPO')).toBeOnTheScreen();
+    expect(filter.getByText('OTRAS')).toBeOnTheScreen();
   });
 
   it('drops the headings when every tag shares one group', async () => {
@@ -340,17 +346,17 @@ describe('tag filter grouping on the wardrobe screen', () => {
     );
     await renderWardrobe();
 
-    const filter = screen.getByTestId('wardrobe-tag-filter');
-    expect(within(filter).queryByText('TODO')).not.toBeOnTheScreen();
-    expect(within(filter).getByText('invierno')).toBeOnTheScreen();
+    const filter = await openTagFilter();
+    expect(filter.queryByText('TODO')).not.toBeOnTheScreen();
+    expect(filter.getByText('invierno')).toBeOnTheScreen();
   });
 
   it('still filters correctly when the chips are grouped', async () => {
     await seed();
     await renderWardrobe();
 
-    const filter = screen.getByTestId('wardrobe-tag-filter');
-    await fireEvent.press(within(filter).getByText('verano'));
+    const filter = await openTagFilter();
+    await fireEvent.press(filter.getByText('verano'));
 
     await waitFor(() => expect(screen.queryByText('Camisa vaquera')).not.toBeOnTheScreen());
     expect(screen.getByText('Pantalón corto')).toBeOnTheScreen();

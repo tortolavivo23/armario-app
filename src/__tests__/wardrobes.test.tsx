@@ -296,8 +296,9 @@ describe('switching wardrobes from the title', () => {
 
     await fireEvent.press(screen.getByTestId('wardrobe-option-w1'));
 
-    await waitFor(() => expect(screen.getByTestId('wardrobe-tag-filter')).toBeOnTheScreen());
-    const filter = within(screen.getByTestId('wardrobe-tag-filter'));
+    await waitFor(() => expect(screen.getByTestId('wardrobe-tag-filter-button')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('wardrobe-tag-filter-button'));
+    const filter = within(await screen.findByTestId('wardrobe-tag-filter'));
     expect(filter.getByText('lana')).toBeOnTheScreen();
     expect(filter.queryByText('playa')).not.toBeOnTheScreen();
   });
