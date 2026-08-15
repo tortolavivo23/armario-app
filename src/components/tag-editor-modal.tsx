@@ -35,6 +35,19 @@ export function TagEditorModal({
   const [group, setGroup] = useState(tag?.group ?? '');
   const [color, setColor] = useState(tag?.color ?? TagColors[0]);
 
+  // The modal only hides between tags, it never unmounts, so the fields have to
+  // be re-seeded by hand when a different tag is opened. Without this the group
+  // of the tag edited before is still in the box, and saving a colour change
+  // quietly moves the tag into that group.
+  const [lastName, setLastName] = useState<string | null>(null);
+  if ((tag?.name ?? null) !== lastName) {
+    setLastName(tag?.name ?? null);
+    if (tag) {
+      setGroup(tag.group ?? '');
+      setColor(tag.color);
+    }
+  }
+
   return (
     <Modal visible={tag != null} animationType="slide" onRequestClose={onClose}>
       <ThemedView style={styles.container}>

@@ -308,6 +308,55 @@ describe('tag manager', () => {
     });
   });
 
+  it('reloads the editor for the tag actually being edited', async () => {
+    await seed();
+    await openTagsManager();
+
+    // "pantalón" has no group; give it one and save.
+    await fireEvent.press(screen.getByTestId('tags-manager-tag-pantalón'));
+    await screen.findByTestId('tag-editor-group');
+    await fireEvent.changeText(screen.getByTestId('tag-editor-group'), 'tipo');
+    await fireEvent.press(screen.getByTestId('tag-editor-save'));
+    await waitFor(() => expect(screen.queryByTestId('tag-editor-group')).not.toBeOnTheScreen());
+
+    // The editor only hides between tags, so it used to reopen still showing
+    // "tipo" and the colour of the tag before.
+    await fireEvent.press(screen.getByTestId('tags-manager-tag-invierno'));
+    await screen.findByTestId('tag-editor-group');
+
+    expect(screen.getByTestId('tag-editor-group').props.value).toBe('estación');
+    expect(
+      within(screen.getByTestId(`tag-editor-color-${TagColors[0]}`)).getByText('✓'),
+    ).toBeOnTheScreen();
+  });
+
+  it('changing only the colour leaves the tag in its own group', async () => {
+    await seed();
+    await openTagsManager();
+
+    await fireEvent.press(screen.getByTestId('tags-manager-tag-pantalón'));
+    await screen.findByTestId('tag-editor-group');
+    await fireEvent.changeText(screen.getByTestId('tag-editor-group'), 'tipo');
+    await fireEvent.press(screen.getByTestId('tag-editor-save'));
+    await waitFor(() => expect(screen.queryByTestId('tag-editor-group')).not.toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByTestId('tags-manager-tag-invierno'));
+    await screen.findByTestId('tag-editor-group');
+    await fireEvent.press(screen.getByTestId(`tag-editor-color-${TagColors[7]}`));
+    await fireEvent.press(screen.getByTestId('tag-editor-save'));
+
+    // The stale group in the box used to be saved along with the colour, moving
+    // "invierno" out of "estación" without the change ever being asked for.
+    await waitFor(async () => {
+      const raw = await AsyncStorage.getItem('wardrobe-tags');
+      expect(JSON.parse(raw ?? '[]')).toContainEqual({
+        name: 'invierno',
+        group: 'estación',
+        color: TagColors[7],
+      });
+    });
+  });
+
   it('offers the groups already in use as shortcuts', async () => {
     await seed();
     await openTagsManager();
